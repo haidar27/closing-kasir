@@ -416,15 +416,20 @@
                   <input id="brokenMoney" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
                   <small>Saldo uang pecah yang sudah tersedia sebelum tambahan dari omzet hari ini.</small>
                 </div>
+                <div class="field">
+                  <label for="salesRemainder">Tambahan Uang Pecah dari Omzet</label>
+                  <input id="salesRemainder" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
+                  <small>Isi manual nominal yang tidak diambil owner. Contoh: ketik <strong>23</strong> untuk Rp 23 atau <strong>75.000</strong> untuk Rp 75.000.</small>
+                </div>
                 <div class="field span-2">
-                  <label>Aturan Uang Diambil Owner</label>
-                  <input id="differenceFormula" type="text" value="Omzet dibulatkan ke bawah kelipatan Rp 100.000; sisanya otomatis menjadi tambahan uang pecah." disabled />
+                  <label>Perhitungan Owner</label>
+                  <input id="differenceFormula" type="text" value="Uang Diambil Owner = Total Penjualan / Omzet − Tambahan Uang Pecah dari Omzet" disabled />
                 </div>
               </div>
 
               <div class="hint" style="margin-top:16px;">
                 <div>💡</div>
-                <div><strong>Contoh:</strong> omzet Rp5.075.000 akan tetap tercatat sebagai omzet Rp5.075.000. Owner diambilkan Rp5.000.000, sedangkan Rp75.000 otomatis masuk ke tambahan uang pecah.</div>
+                <div><strong>Contoh:</strong> omzet Rp5.075.000 dan kamu mengisi tambahan uang pecah Rp75.000. Sistem akan mencatat omzet tetap Rp5.075.000, menghitung owner menerima Rp5.000.000, dan uang pecah bertambah Rp75.000. Tidak ada pembulatan otomatis.</div>
               </div>
 
               <div class="money-summary" style="margin-top:16px;">
@@ -807,9 +812,9 @@ const firebaseConfig = {
       const totalSales = numericInput("totalSales");
       const brokenMoney = numericInput("brokenMoney");
 
-      // Owner mengambil nominal omzet yang bulat ke bawah pada kelipatan Rp100.000.
-      // Sisa omzet otomatis menjadi tambahan uang pecah, bukan pengeluaran.
-      const salesRemainder = totalSales % 100000;
+      // Nominal tambahan uang pecah dari omzet diisi manual oleh pengguna.
+      // Tidak ada pembulatan otomatis. Nilai ini tetap bagian dari omzet.
+      const salesRemainder = Math.max(0, numericInput("salesRemainder"));
       const ownerWithdrawal = Math.max(0, totalSales - salesRemainder);
       const finalBrokenMoney = brokenMoney + salesRemainder;
 
@@ -920,6 +925,7 @@ const firebaseConfig = {
       $("incomeTransferNote").value = "";
       setRupiahInputValue("totalSales", "");
       setRupiahInputValue("brokenMoney", "");
+      setRupiahInputValue("salesRemainder", "");
       defaultFormRows();
       clearCurrentRecord();
       updateCalculations();
@@ -1055,6 +1061,7 @@ const firebaseConfig = {
       $("incomeTransferNote").value = record.income?.transferNote || "";
       setRupiahInputValue("totalSales", record.totals?.totalSales || "");
       setRupiahInputValue("brokenMoney", record.totals?.brokenMoneyInitial ?? record.totals?.brokenMoney ?? "");
+      setRupiahInputValue("salesRemainder", record.totals?.salesRemainder ?? "");
       operationalRows.splice(0, operationalRows.length, ...(record.operationalExpenses || []).map((r, i) => ({ id:`op-${Date.now()}-${i}`, name:r.name || "", amount:Number(r.amount || 0), note:r.note || "" })));
       mealRows.splice(0, mealRows.length, ...(record.mealExpenses || []).map((r, i) => ({ id:`meal-${Date.now()}-${i}`, name:r.name || "", amount:Number(r.amount || 0), note:r.note || "" })));
       if (!operationalRows.length) operationalRows.push({ id:`op-${Date.now()}`, name:"", amount:0, note:"" });
@@ -1325,7 +1332,7 @@ const firebaseConfig = {
     }
 
     function bindEvents() {
-      ["incomeCash","incomeQris","incomeTransfer","totalSales","brokenMoney"].forEach(id => {
+      ["incomeCash","incomeQris","incomeTransfer","totalSales","brokenMoney","salesRemainder"].forEach(id => {
         $(id).addEventListener("input", () => {
           updateCalculations();
           markDirty();
