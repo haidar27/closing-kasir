@@ -429,7 +429,7 @@
 
               <div class="hint" style="margin-top:16px;">
                 <div>💡</div>
-                <div><strong>Contoh:</strong> omzet Rp5.075.000 dan kamu mengisi tambahan uang pecah Rp75.000. Sistem akan mencatat omzet tetap Rp5.075.000, menghitung owner menerima Rp5.000.000, dan uang pecah bertambah Rp75.000. Tidak ada pembulatan otomatis.</div>
+                <div><strong>Logika laporan:</strong> omzet tetap dicatat utuh. Tambahan uang pecah dari omzet hanya memindahkan sebagian omzet menjadi saldo uang pecah, sehingga <strong>tidak dianggap selisih</strong>. Selisih membandingkan <strong>Total Pemasukan setelah penyesuaian</strong> dengan <strong>Total Omzet</strong>. Tanda <strong>+</strong> berarti pemasukan lebih besar dari omzet, sedangkan <strong>-</strong> berarti pemasukan lebih kecil dari omzet.</div>
               </div>
 
               <div class="money-summary" style="margin-top:16px;">
@@ -439,7 +439,11 @@
                 <div class="stat warning"><div class="label">Tambahan Uang Pecah dari Omzet</div><div id="salesRemainderDisplay" class="value">Rp 0</div></div>
                 <div class="stat"><div class="label">Uang Pecah Akhir</div><div id="finalBrokenMoneyDisplay" class="value">Rp 0</div></div>
                 <div class="stat success"><div class="label">Uang Diambil Owner</div><div id="ownerWithdrawalDisplay" class="value">Rp 0</div></div>
-                <div class="stat danger"><div class="label">Total Selisih</div><div id="differenceDisplay" class="value">Rp 0</div></div>
+                <div id="differenceStat" class="stat danger">
+                  <div class="label">Total Selisih</div>
+                  <div id="differenceDisplay" class="value">Rp 0</div>
+                  <small id="differenceStatus" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;">Pas / sesuai omzet</small>
+                </div>
               </div>
 
               <div class="action-bar">
@@ -610,6 +614,12 @@ const firebaseConfig = {
     function money(value) {
       const n = Number(value || 0);
       return currency.format(Number.isFinite(n) ? n : 0);
+    }
+
+    function signedMoney(value) {
+      const n = Number(value || 0);
+      if (!Number.isFinite(n) || n === 0) return "Rp 0";
+      return `${n > 0 ? "+" : "-"}${money(Math.abs(n))}`;
     }
 
     function numericInput(id) {
@@ -803,36 +813,73 @@ const firebaseConfig = {
       const baseQris = numericInput("incomeQris");
       const transfer = numericInput("incomeTransfer");
       const expenses = getExpenses();
+
       const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-      const qrisAdjustment = expenses.filter(e => e.qrisAdjustment).reduce((sum, e) => sum + e.amount, 0);
+      const qrisAdjustment = expenses
+        .filter(e => e.qrisAdjustment)
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      // Pengeluaran dianggap berasal dari omzet:
+      // - pengeluaran biasa dikembalikan ke Cash
+      // - Bukupay + Admin dikembalikan ke QRIS
+      // Tujuannya adalah mengubah nominal setoran/net menjadi
+      // pemasukan kotor sebelum pengeluaran.
       const cashAdjustment = totalExpenses - qrisAdjustment;
       const adjustedCash = baseCash + cashAdjustment;
       const adjustedQris = baseQris + qrisAdjustment;
       const totalIncome = adjustedCash + adjustedQris + transfer;
+
       const totalSales = numericInput("totalSales");
       const brokenMoney = numericInput("brokenMoney");
 
-      // Nominal tambahan uang pecah dari omzet diisi manual oleh pengguna.
-      // Tidak ada pembulatan otomatis. Nilai ini tetap bagian dari omzet.
+      // Tambahan uang pecah adalah bagian dari omzet yang sengaja
+      // tidak disetorkan kepada owner dan dipindahkan ke saldo uang pecah.
+      // Nominal ini TIDAK boleh menjadi selisih.
       const salesRemainder = Math.max(0, numericInput("salesRemainder"));
       const ownerWithdrawal = Math.max(0, totalSales - salesRemainder);
       const finalBrokenMoney = brokenMoney + salesRemainder;
 
-      // Selisih tetap memakai omzet sebenarnya agar tambahan uang pecah
-      // tidak dianggap sebagai pengeluaran dan tidak membuat laporan minus.
-      const difference = totalSales - totalIncome - totalExpenses;
+      // Rekonsiliasi owner:
+      // Expected = omzet - pengeluaran - tambahan uang pecah
+      // Actual   = pemasukan yang sudah disesuaikan - pengeluaran - tambahan uang pecah
+      // Selisih   = actual - expected
+      //
+      // Dengan rumus ini, salesRemainder otomatis saling menghilangkan
+      // dan TIDAK dihitung sebagai selisih.
+      const expectedOwnerSettlement = totalSales - totalExpenses - salesRemainder;
+      const actualOwnerSettlement = totalIncome - totalExpenses - salesRemainder;
+      const difference = actualOwnerSettlement - expectedOwnerSettlement;
+
       const operationalTotal = operationalRows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
       const mealTotal = mealRows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+
       return {
-        baseCash, baseQris, transfer, totalExpenses, qrisAdjustment, cashAdjustment,
-        adjustedCash, adjustedQris, totalIncome, totalSales, brokenMoney,
-        salesRemainder, ownerWithdrawal, finalBrokenMoney, difference,
-        operationalTotal, mealTotal, expenses
+        baseCash,
+        baseQris,
+        transfer,
+        totalExpenses,
+        qrisAdjustment,
+        cashAdjustment,
+        adjustedCash,
+        adjustedQris,
+        totalIncome,
+        totalSales,
+        brokenMoney,
+        salesRemainder,
+        ownerWithdrawal,
+        finalBrokenMoney,
+        expectedOwnerSettlement,
+        actualOwnerSettlement,
+        difference,
+        operationalTotal,
+        mealTotal,
+        expenses
       };
     }
 
     function updateCalculations() {
       const totals = computeTotals();
+
       $("cashBaseDisplay").textContent = money(totals.baseCash);
       $("cashAdjustedDisplay").textContent = money(totals.adjustedCash);
       $("qrisAdjustedDisplay").textContent = money(totals.adjustedQris);
@@ -845,7 +892,23 @@ const firebaseConfig = {
       $("salesRemainderDisplay").textContent = money(totals.salesRemainder);
       $("finalBrokenMoneyDisplay").textContent = money(totals.finalBrokenMoney);
       $("ownerWithdrawalDisplay").textContent = money(totals.ownerWithdrawal);
-      $("differenceDisplay").textContent = money(totals.difference);
+
+      $("differenceDisplay").textContent = signedMoney(totals.difference);
+
+      const diffStat = $("differenceStat");
+      const diffStatus = $("differenceStatus");
+      diffStat.classList.remove("success", "warning", "danger");
+
+      if (totals.difference > 0) {
+        diffStat.classList.add("success");
+        diffStatus.textContent = "PLUS • pemasukan lebih besar dari omzet";
+      } else if (totals.difference < 0) {
+        diffStat.classList.add("danger");
+        diffStatus.textContent = "MINUS • pemasukan lebih kecil dari omzet";
+      } else {
+        diffStat.classList.add("success");
+        diffStatus.textContent = "PAS • pemasukan sesuai omzet";
+      }
     }
 
     function setTodayUI() {
@@ -948,7 +1011,7 @@ const firebaseConfig = {
       const monthKey = dateKey.slice(0, 7);
       const totals = computeTotals();
       return {
-        schemaVersion: 1,
+        schemaVersion: 2,
         dateKey,
         monthKey,
         branchId: sanitizeId(branch),
@@ -979,6 +1042,8 @@ const firebaseConfig = {
           brokenMoneyInitial: totals.brokenMoney,
           salesRemainder: totals.salesRemainder,
           ownerWithdrawal: totals.ownerWithdrawal,
+          expectedOwnerSettlement: totals.expectedOwnerSettlement,
+          actualOwnerSettlement: totals.actualOwnerSettlement,
           finalBrokenMoney: totals.finalBrokenMoney
         },
         updatedAt: serverTimestamp(),
@@ -992,6 +1057,9 @@ const firebaseConfig = {
       if (!payload.branch) return "Cabang wajib dipilih.";
       if (!payload.cashierName) return "Nama kasir wajib diisi.";
       if (!payload.supervisorName) return "Nama supervisor wajib diisi.";
+      if ((payload.totals?.salesRemainder || 0) > (payload.totals?.totalSales || 0)) {
+        return "Tambahan uang pecah dari omzet tidak boleh lebih besar dari total omzet.";
+      }
       return "";
     }
 
@@ -1069,6 +1137,30 @@ const firebaseConfig = {
       renderRows("operational");
       renderRows("meal");
       updateCalculations();
+
+      // Rebuild derived totals from the hydrated form so records created
+      // with the previous algorithm are also corrected immediately.
+      const recalculated = computeTotals();
+      currentRecord = {
+        ...record,
+        totals: {
+          ...(record.totals || {}),
+          totalIncome: recalculated.totalIncome,
+          totalOperational: recalculated.operationalTotal,
+          totalMeal: recalculated.mealTotal,
+          totalExpenses: recalculated.totalExpenses,
+          totalSales: recalculated.totalSales,
+          difference: recalculated.difference,
+          brokenMoney: recalculated.brokenMoney,
+          brokenMoneyInitial: recalculated.brokenMoney,
+          salesRemainder: recalculated.salesRemainder,
+          ownerWithdrawal: recalculated.ownerWithdrawal,
+          expectedOwnerSettlement: recalculated.expectedOwnerSettlement,
+          actualOwnerSettlement: recalculated.actualOwnerSettlement,
+          finalBrokenMoney: recalculated.finalBrokenMoney
+        }
+      };
+
       formDirty = false;
       $("recordMode").textContent = "Tersimpan";
       $("exportExcelBtn").disabled = false;
@@ -1206,7 +1298,9 @@ const firebaseConfig = {
           ["Tambahan Uang Pecah dari Omzet", totals.salesRemainder || 0],
           ["Uang Pecah Akhir", totals.finalBrokenMoney ?? totals.brokenMoney ?? 0],
           ["Uang Diambil Owner", (totals.ownerWithdrawal ?? totals.totalSales ?? 0)],
-          ["Total Selisih", totals.difference || 0]
+          ["Setoran Owner Seharusnya", totals.expectedOwnerSettlement ?? 0],
+          ["Setoran Owner Aktual", totals.actualOwnerSettlement ?? 0],
+          ["Total Selisih", signedMoney(totals.difference || 0)]
         ],
         details: [
           ["Jenis", "Kategori", "Nama", "Nominal", "Keterangan"],
