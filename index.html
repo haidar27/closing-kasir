@@ -336,7 +336,7 @@
             <div class="card-header">
               <div>
                 <h3>Pemasukan</h3>
-                <p>Nominal dasar dapat diinput. Pemasukan cash/QRIS akan menyesuaikan pengeluaran sesuai aturan otomatis.</p>
+                <p>Masukkan nominal pemasukan yang benar-benar diterima: Cash, QRIS, dan Transfer.</p>
               </div>
             </div>
             <div class="card-body">
@@ -354,14 +354,14 @@
               </div>
 
               <div class="hint">
-                <div>⚙️</div>
-                <div><strong>Aturan otomatis:</strong> setiap pengeluaran akan menambah pemasukan <strong>Cash</strong>. Namun, jika keterangan pengeluaran mengandung kata <strong>“bukupay”</strong> dan <strong>“admin”</strong>, nominal pengeluaran tersebut otomatis masuk ke penyesuaian <strong>QRIS</strong>.</div>
+                <div>ℹ️</div>
+                <div><strong>Aturan:</strong> pengeluaran Operasional dan Makan/Minum hanya dicatat sebagai informasi transaksi. Pengeluaran <strong>tidak menambah Cash, tidak menambah QRIS, dan tidak menambah Total Pemasukan</strong>. User menentukan sendiri Total Cash berdasarkan uang yang benar-benar ada.</div>
               </div>
 
               <div class="money-summary">
                 <div class="stat"><div class="label">Cash Dasar</div><div id="cashBaseDisplay" class="value">Rp 0</div></div>
-                <div class="stat primary"><div class="label">Cash Setelah Penyesuaian</div><div id="cashAdjustedDisplay" class="value">Rp 0</div></div>
-                <div class="stat"><div class="label">QRIS Setelah Penyesuaian</div><div id="qrisAdjustedDisplay" class="value">Rp 0</div></div>
+                <div class="stat primary"><div class="label">Total Cash</div><div id="cashAdjustedDisplay" class="value">Rp 0</div></div>
+                <div class="stat"><div class="label">Total QRIS</div><div id="qrisAdjustedDisplay" class="value">Rp 0</div></div>
                 <div class="stat success"><div class="label">Total Pemasukan</div><div id="totalIncomeDisplay" class="value">Rp 0</div></div>
               </div>
             </div>
@@ -419,17 +419,17 @@
                 <div class="field">
                   <label for="salesRemainder">Tambahan Uang Pecah dari Omzet</label>
                   <input id="salesRemainder" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
-                  <small>Isi manual nominal yang tidak diambil owner. Contoh: ketik <strong>23</strong> untuk Rp 23 atau <strong>75.000</strong> untuk Rp 75.000.</small>
+                  <small>Nominal omzet yang sengaja dipisahkan untuk menjadi uang pecah. Nominal ini tetap bagian dari omzet dan <strong>ikut diperhitungkan dalam selisih</strong>.</small>
                 </div>
                 <div class="field span-2">
                   <label>Perhitungan Owner</label>
-                  <input id="differenceFormula" type="text" value="Uang Diambil Owner = Total Penjualan / Omzet − Tambahan Uang Pecah dari Omzet" disabled />
+                  <input id="differenceFormula" type="text" value="Selisih = Total Cash + QRIS + Transfer + Tambahan Uang Pecah − Total Penjualan / Omzet" disabled />
                 </div>
               </div>
 
               <div class="hint" style="margin-top:16px;">
                 <div>💡</div>
-                <div><strong>Logika laporan:</strong> omzet tetap dicatat utuh. Tambahan uang pecah dari omzet hanya memindahkan sebagian omzet menjadi saldo uang pecah, sehingga <strong>tidak dianggap selisih</strong>. Selisih membandingkan <strong>Total Pemasukan setelah penyesuaian</strong> dengan <strong>Total Omzet</strong>. Tanda <strong>+</strong> berarti pemasukan lebih besar dari omzet, sedangkan <strong>-</strong> berarti pemasukan lebih kecil dari omzet.</div>
+                <div><strong>Logika laporan:</strong> pengeluaran hanya menjadi informasi dan <strong>tidak mengubah angka pemasukan</strong>. Tambahan uang pecah berasal dari omzet, sehingga nominal tersebut <strong>ditambahkan kembali dalam rekonsiliasi omzet</strong>. Rumus selisih: <strong>(Cash + QRIS + Transfer + Tambahan Uang Pecah dari Omzet) − Total Omzet</strong>. Tanda <strong>+</strong> berarti ada kelebihan, tanda <strong>-</strong> berarti ada kekurangan, dan <strong>Rp 0</strong> berarti sesuai.</div>
               </div>
 
               <div class="money-summary" style="margin-top:16px;">
@@ -814,40 +814,31 @@ const firebaseConfig = {
       const transfer = numericInput("incomeTransfer");
       const expenses = getExpenses();
 
+      // Pengeluaran hanya dicatat sebagai informasi. Tidak ada pengeluaran
+      // yang otomatis ditambahkan ke Cash/QRIS maupun Total Pemasukan.
       const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-      const qrisAdjustment = expenses
-        .filter(e => e.qrisAdjustment)
-        .reduce((sum, e) => sum + e.amount, 0);
-
-      // Pengeluaran dianggap berasal dari omzet:
-      // - pengeluaran biasa dikembalikan ke Cash
-      // - Bukupay + Admin dikembalikan ke QRIS
-      // Tujuannya adalah mengubah nominal setoran/net menjadi
-      // pemasukan kotor sebelum pengeluaran.
-      const cashAdjustment = totalExpenses - qrisAdjustment;
-      const adjustedCash = baseCash + cashAdjustment;
-      const adjustedQris = baseQris + qrisAdjustment;
-      const totalIncome = adjustedCash + adjustedQris + transfer;
+      const qrisAdjustment = 0;
+      const cashAdjustment = 0;
+      const adjustedCash = baseCash;
+      const adjustedQris = baseQris;
+      const totalIncome = baseCash + baseQris + transfer;
 
       const totalSales = numericInput("totalSales");
       const brokenMoney = numericInput("brokenMoney");
 
-      // Tambahan uang pecah adalah bagian dari omzet yang sengaja
-      // tidak disetorkan kepada owner dan dipindahkan ke saldo uang pecah.
-      // Nominal ini TIDAK boleh menjadi selisih.
+      // Tambahan uang pecah berasal dari omzet yang sengaja dipisahkan.
+      // Karena masih merupakan bagian dari omzet, nominal ini ditambahkan
+      // ke sisi aktual ketika melakukan rekonsiliasi.
       const salesRemainder = Math.max(0, numericInput("salesRemainder"));
       const ownerWithdrawal = Math.max(0, totalSales - salesRemainder);
       const finalBrokenMoney = brokenMoney + salesRemainder;
 
-      // Rekonsiliasi owner:
-      // Expected = omzet - pengeluaran - tambahan uang pecah
-      // Actual   = pemasukan yang sudah disesuaikan - pengeluaran - tambahan uang pecah
-      // Selisih   = actual - expected
-      //
-      // Dengan rumus ini, salesRemainder otomatis saling menghilangkan
-      // dan TIDAK dihitung sebagai selisih.
-      const expectedOwnerSettlement = totalSales - totalExpenses - salesRemainder;
-      const actualOwnerSettlement = totalIncome - totalExpenses - salesRemainder;
+      // Rekonsiliasi omzet:
+      // Actual = Cash + QRIS + Transfer + tambahan uang pecah dari omzet
+      // Expected = total omzet
+      // Pengeluaran TIDAK ikut masuk rumus karena hanya menjadi informasi.
+      const expectedOwnerSettlement = totalSales;
+      const actualOwnerSettlement = totalIncome + salesRemainder;
       const difference = actualOwnerSettlement - expectedOwnerSettlement;
 
       const operationalTotal = operationalRows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
@@ -901,13 +892,13 @@ const firebaseConfig = {
 
       if (totals.difference > 0) {
         diffStat.classList.add("success");
-        diffStatus.textContent = "PLUS • pemasukan lebih besar dari omzet";
+        diffStatus.textContent = "PLUS • pemasukan + uang pecah lebih besar dari omzet";
       } else if (totals.difference < 0) {
         diffStat.classList.add("danger");
-        diffStatus.textContent = "MINUS • pemasukan lebih kecil dari omzet";
+        diffStatus.textContent = "MINUS • pemasukan + uang pecah lebih kecil dari omzet";
       } else {
         diffStat.classList.add("success");
-        diffStatus.textContent = "PAS • pemasukan sesuai omzet";
+        diffStatus.textContent = "PAS • sesuai dengan omzet";
       }
     }
 
@@ -1011,7 +1002,7 @@ const firebaseConfig = {
       const monthKey = dateKey.slice(0, 7);
       const totals = computeTotals();
       return {
-        schemaVersion: 2,
+        schemaVersion: 3,
         dateKey,
         monthKey,
         branchId: sanitizeId(branch),
@@ -1025,9 +1016,9 @@ const firebaseConfig = {
           qrisNote: $("incomeQrisNote").value.trim(),
           transfer: totals.transfer,
           transferNote: $("incomeTransferNote").value.trim(),
-          cashAdjusted: totals.adjustedCash,
-          qrisAdjusted: totals.adjustedQris,
-          qrisAdjustment: totals.qrisAdjustment
+          cashAdjusted: totals.baseCash,
+          qrisAdjusted: totals.baseQris,
+          qrisAdjustment: 0
         },
         operationalExpenses: serializeRows(operationalRows),
         mealExpenses: serializeRows(mealRows),
@@ -1279,11 +1270,11 @@ const firebaseConfig = {
           [],
           ["PEMASUKAN"],
           ["Cash Dasar", income.cash || 0],
-          ["Penyesuaian Cash", Math.max(0, (income.cashAdjusted || 0) - (income.cash || 0))],
-          ["Cash Setelah Penyesuaian", income.cashAdjusted || 0],
+          ["Penyesuaian Cash", 0],
+          ["Total Cash", income.cash || 0],
           ["QRIS Dasar", income.qris || 0],
-          ["Penyesuaian QRIS (Bukupay + Admin)", income.qrisAdjustment || 0],
-          ["QRIS Setelah Penyesuaian", income.qrisAdjusted || 0],
+          ["Penyesuaian QRIS", 0],
+          ["Total QRIS", income.qris || 0],
           ["Transfer", income.transfer || 0],
           ["TOTAL PEMASUKAN", totals.totalIncome || 0],
           [],
@@ -1300,7 +1291,8 @@ const firebaseConfig = {
           ["Uang Diambil Owner", (totals.ownerWithdrawal ?? totals.totalSales ?? 0)],
           ["Setoran Owner Seharusnya", totals.expectedOwnerSettlement ?? 0],
           ["Setoran Owner Aktual", totals.actualOwnerSettlement ?? 0],
-          ["Total Selisih", signedMoney(totals.difference || 0)]
+          ["Total Selisih", signedMoney(totals.difference || 0)],
+          ["Rumus Selisih", "Cash + QRIS + Transfer + Tambahan Uang Pecah − Total Omzet"]
         ],
         details: [
           ["Jenis", "Kategori", "Nama", "Nominal", "Keterangan"],
