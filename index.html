@@ -407,23 +407,33 @@
             <div class="card-body">
               <div class="form-grid">
                 <div class="field">
-                  <label for="totalSales">Total Penjualan</label>
+                  <label for="totalSales">Total Penjualan / Omzet</label>
                   <input id="totalSales" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
+                  <small>Omzet tetap dicatat sesuai angka sebenarnya, termasuk nominal yang ditahan menjadi uang pecah.</small>
                 </div>
                 <div class="field">
-                  <label for="brokenMoney">Total Uang Pecah</label>
+                  <label for="brokenMoney">Uang Pecah Awal</label>
                   <input id="brokenMoney" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
+                  <small>Saldo uang pecah yang sudah tersedia sebelum tambahan dari omzet hari ini.</small>
                 </div>
                 <div class="field span-2">
-                  <label>Rumus Selisih</label>
-                  <input id="differenceFormula" type="text" value="Total Penjualan − Total Pemasukan − Total Pengeluaran" disabled />
+                  <label>Aturan Uang Diambil Owner</label>
+                  <input id="differenceFormula" type="text" value="Omzet dibulatkan ke bawah kelipatan Rp 100.000; sisanya otomatis menjadi tambahan uang pecah." disabled />
                 </div>
+              </div>
+
+              <div class="hint" style="margin-top:16px;">
+                <div>💡</div>
+                <div><strong>Contoh:</strong> omzet Rp5.075.000 akan tetap tercatat sebagai omzet Rp5.075.000. Owner diambilkan Rp5.000.000, sedangkan Rp75.000 otomatis masuk ke tambahan uang pecah.</div>
               </div>
 
               <div class="money-summary" style="margin-top:16px;">
                 <div class="stat"><div class="label">Total Pemasukan</div><div id="finalIncomeDisplay" class="value">Rp 0</div></div>
                 <div class="stat"><div class="label">Total Pengeluaran</div><div id="finalExpenseDisplay" class="value">Rp 0</div></div>
-                <div class="stat primary"><div class="label">Total Penjualan</div><div id="finalSalesDisplay" class="value">Rp 0</div></div>
+                <div class="stat primary"><div class="label">Total Penjualan / Omzet</div><div id="finalSalesDisplay" class="value">Rp 0</div></div>
+                <div class="stat warning"><div class="label">Tambahan Uang Pecah dari Omzet</div><div id="salesRemainderDisplay" class="value">Rp 0</div></div>
+                <div class="stat"><div class="label">Uang Pecah Akhir</div><div id="finalBrokenMoneyDisplay" class="value">Rp 0</div></div>
+                <div class="stat success"><div class="label">Uang Diambil Owner</div><div id="ownerWithdrawalDisplay" class="value">Rp 0</div></div>
                 <div class="stat danger"><div class="label">Total Selisih</div><div id="differenceDisplay" class="value">Rp 0</div></div>
               </div>
 
@@ -796,12 +806,22 @@ const firebaseConfig = {
       const totalIncome = adjustedCash + adjustedQris + transfer;
       const totalSales = numericInput("totalSales");
       const brokenMoney = numericInput("brokenMoney");
+
+      // Owner mengambil nominal omzet yang bulat ke bawah pada kelipatan Rp100.000.
+      // Sisa omzet otomatis menjadi tambahan uang pecah, bukan pengeluaran.
+      const salesRemainder = totalSales % 100000;
+      const ownerWithdrawal = Math.max(0, totalSales - salesRemainder);
+      const finalBrokenMoney = brokenMoney + salesRemainder;
+
+      // Selisih tetap memakai omzet sebenarnya agar tambahan uang pecah
+      // tidak dianggap sebagai pengeluaran dan tidak membuat laporan minus.
       const difference = totalSales - totalIncome - totalExpenses;
       const operationalTotal = operationalRows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
       const mealTotal = mealRows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
       return {
         baseCash, baseQris, transfer, totalExpenses, qrisAdjustment, cashAdjustment,
-        adjustedCash, adjustedQris, totalIncome, totalSales, brokenMoney, difference,
+        adjustedCash, adjustedQris, totalIncome, totalSales, brokenMoney,
+        salesRemainder, ownerWithdrawal, finalBrokenMoney, difference,
         operationalTotal, mealTotal, expenses
       };
     }
@@ -817,6 +837,9 @@ const firebaseConfig = {
       $("finalIncomeDisplay").textContent = money(totals.totalIncome);
       $("finalExpenseDisplay").textContent = money(totals.totalExpenses);
       $("finalSalesDisplay").textContent = money(totals.totalSales);
+      $("salesRemainderDisplay").textContent = money(totals.salesRemainder);
+      $("finalBrokenMoneyDisplay").textContent = money(totals.finalBrokenMoney);
+      $("ownerWithdrawalDisplay").textContent = money(totals.ownerWithdrawal);
       $("differenceDisplay").textContent = money(totals.difference);
     }
 
@@ -946,7 +969,11 @@ const firebaseConfig = {
           totalExpenses: totals.totalExpenses,
           totalSales: totals.totalSales,
           difference: totals.difference,
-          brokenMoney: totals.brokenMoney
+          brokenMoney: totals.brokenMoney,
+          brokenMoneyInitial: totals.brokenMoney,
+          salesRemainder: totals.salesRemainder,
+          ownerWithdrawal: totals.ownerWithdrawal,
+          finalBrokenMoney: totals.finalBrokenMoney
         },
         updatedAt: serverTimestamp(),
         updatedBy: authUser?.uid || "anonymous"
@@ -1027,7 +1054,7 @@ const firebaseConfig = {
       setRupiahInputValue("incomeTransfer", record.income?.transfer || "");
       $("incomeTransferNote").value = record.income?.transferNote || "";
       setRupiahInputValue("totalSales", record.totals?.totalSales || "");
-      setRupiahInputValue("brokenMoney", record.totals?.brokenMoney || "");
+      setRupiahInputValue("brokenMoney", record.totals?.brokenMoneyInitial ?? record.totals?.brokenMoney ?? "");
       operationalRows.splice(0, operationalRows.length, ...(record.operationalExpenses || []).map((r, i) => ({ id:`op-${Date.now()}-${i}`, name:r.name || "", amount:Number(r.amount || 0), note:r.note || "" })));
       mealRows.splice(0, mealRows.length, ...(record.mealExpenses || []).map((r, i) => ({ id:`meal-${Date.now()}-${i}`, name:r.name || "", amount:Number(r.amount || 0), note:r.note || "" })));
       if (!operationalRows.length) operationalRows.push({ id:`op-${Date.now()}`, name:"", amount:0, note:"" });
@@ -1167,9 +1194,12 @@ const firebaseConfig = {
           ["TOTAL PENGELUARAN", totals.totalExpenses || 0],
           [],
           ["REKAP AKHIR"],
-          ["Total Penjualan", totals.totalSales || 0],
-          ["Total Selisih", totals.difference || 0],
-          ["Total Uang Pecah", totals.brokenMoney || 0]
+          ["Total Penjualan / Omzet", totals.totalSales || 0],
+          ["Uang Pecah Awal", totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0],
+          ["Tambahan Uang Pecah dari Omzet", totals.salesRemainder || 0],
+          ["Uang Pecah Akhir", totals.finalBrokenMoney ?? totals.brokenMoney ?? 0],
+          ["Uang Diambil Owner", (totals.ownerWithdrawal ?? totals.totalSales ?? 0)],
+          ["Total Selisih", totals.difference || 0]
         ],
         details: [
           ["Jenis", "Kategori", "Nama", "Nominal", "Keterangan"],
