@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="Sistem Closing Harian Kasir realtime berbasis Firebase." />
+  <title>Closing Kasir • Realtime</title>
+
+  <!-- Export libraries -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/jspdf-autotable@5.0.8/dist/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --line: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --shadow: 0 12px 30px rgba(15, 23, 42, .08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .app-shell { min-height: 100vh; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(15, 23, 42, .96);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      color: #fff;
+    }
+    .topbar-inner {
+      max-width: 1450px;
+      margin: auto;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, #60a5fa, #2563eb);
+      display: grid; place-items: center; font-weight: 900;
+      box-shadow: 0 8px 20px rgba(37,99,235,.35);
+      flex: 0 0 auto;
+    }
+    .brand h1 { margin: 0; font-size: 17px; letter-spacing: .2px; }
+    .brand p { margin: 2px 0 0; font-size: 12px; color: #cbd5e1; }
+    .topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .status {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 12px; padding: 8px 10px; border-radius: 999px;
+      background: rgba(255,255,255,.08); color: #e2e8f0;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 999px; background: #94a3b8; }
+    .status.ok .status-dot { background: #4ade80; box-shadow: 0 0 0 4px rgba(74,222,128,.12); }
+    .status.warn .status-dot { background: #fbbf24; }
+    .status.error .status-dot { background: #f87171; }
+
+    .container { max-width: 1450px; margin: auto; padding: 24px 20px 50px; }
+    .hero {
+      display: grid; grid-template-columns: 1.35fr .65fr; gap: 18px;
+      margin-bottom: 18px;
+    }
+    .hero-card {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #fff; border-radius: 24px; padding: 26px;
+      box-shadow: var(--shadow); overflow: hidden; position: relative;
+    }
+    .hero-card::after {
+      content: ""; position: absolute; width: 250px; height: 250px;
+      border-radius: 50%; border: 1px solid rgba(255,255,255,.08);
+      right: -80px; top: -70px;
+    }
+    .hero-card h2 { margin: 0 0 8px; font-size: clamp(22px, 3vw, 32px); }
+    .hero-card p { color: #cbd5e1; margin: 0; max-width: 720px; line-height: 1.6; }
+    .today-chip {
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
+      padding: 14px; border-radius: 16px; display: flex; align-items: center;
+      justify-content: space-between; gap: 12px; position: relative; z-index: 1;
+    }
+    .today-chip strong { font-size: 18px; }
+
+    .grid-main { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(340px, .55fr); gap: 18px; align-items: start; }
+    .left-col, .right-col { display: grid; gap: 18px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .card-header { padding: 18px 20px; border-bottom: 1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .card-header h3 { margin:0; font-size: 15px; }
+    .card-header p { margin:4px 0 0; color:var(--muted); font-size:12px; }
+    .card-body { padding: 20px; }
+
+    .form-grid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; }
+    .field { display:grid; gap:7px; }
+    .field.span-2 { grid-column: span 2; }
+    .field label { font-size: 12px; font-weight: 750; color: #334155; }
+    .field small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+    input, select, textarea {
+      width:100%; border:1px solid #cbd5e1; border-radius:12px; background:#fff;
+      color:var(--text); outline:none; transition:.16s ease; padding:11px 12px;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #60a5fa; box-shadow: 0 0 0 4px rgba(37,99,235,.10); }
+    input[disabled], select[disabled] { background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
+    .money { text-align:right; font-variant-numeric: tabular-nums; }
+
+    .section-title { display:flex; align-items:center; justify-content:space-between; gap:12px; margin: 0 0 12px; }
+    .section-title h4 { margin:0; font-size:14px; }
+    .section-title p { margin:0; font-size:11px; color:var(--muted); }
+
+    .money-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top: 18px; }
+    .stat {
+      border:1px solid var(--line); background:var(--surface-soft); border-radius:14px; padding:14px;
+      min-width:0;
+    }
+    .stat .label { color:var(--muted); font-size:11px; margin-bottom:6px; }
+    .stat .value { font-size:19px; font-weight:850; letter-spacing:-.3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .stat.primary { background:#eff6ff; border-color:#bfdbfe; }
+    .stat.success { background:#f0fdf4; border-color:#bbf7d0; }
+    .stat.warning { background:#fffbeb; border-color:#fde68a; }
+    .stat.danger { background:#fef2f2; border-color:#fecaca; }
+
+    .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:14px; }
+    table { width:100%; border-collapse:collapse; min-width:680px; }
+    th, td { padding:10px 11px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
+    th { background:#f8fafc; color:#475569; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+    td { font-size:12px; }
+    tr:last-child td { border-bottom:0; }
+    .table-input { padding:9px 10px; border-radius:10px; }
+    .row-index { width:40px; text-align:center; color:var(--muted); font-weight:700; }
+    .row-actions { width:54px; text-align:center; }
+    .remove-btn {
+      width:32px; height:32px; border:1px solid #fecaca; color:var(--danger); background:#fff1f2;
+      border-radius:10px; font-weight:800;
+    }
+    .add-btn {
+      border:1px dashed #94a3b8; background:#fff; color:#334155; padding:9px 12px; border-radius:11px;
+      font-weight:700; font-size:12px;
+    }
+    .add-btn:hover { border-color:#60a5fa; color:var(--primary); background:#eff6ff; }
+
+    .hint {
+      display:flex; gap:10px; align-items:flex-start; padding:12px 14px; background:#f8fafc; border:1px solid var(--line); border-radius:12px;
+      margin-top:12px; color:#475569; font-size:11px; line-height:1.55;
+    }
+    .hint strong { color:#0f172a; }
+
+    .action-bar { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; padding-top: 18px; border-top:1px solid var(--line); margin-top:18px; }
+    .btn {
+      border:1px solid transparent; border-radius:12px; padding:10px 14px; font-weight:800; font-size:12px;
+      display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:.15s ease;
+    }
+    .btn:disabled { opacity:.55; cursor:not-allowed; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-primary:hover:not(:disabled) { background:var(--primary-dark); transform:translateY(-1px); }
+    .btn-secondary { background:#fff; color:#334155; border-color:#cbd5e1; }
+    .btn-secondary:hover:not(:disabled) { background:#f8fafc; }
+    .btn-danger { background:#fff; color:var(--danger); border-color:#fecaca; }
+    .btn-dark { background:#0f172a; color:#fff; }
+
+    .history-tools { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .history-list { display:grid; gap:10px; max-height: 680px; overflow:auto; padding-right:3px; }
+    .history-item {
+      border:1px solid var(--line); background:#fff; border-radius:14px; padding:13px;
+      display:grid; grid-template-columns: 1fr auto; gap:10px; cursor:pointer;
+      transition:.15s ease;
+    }
+    .history-item:hover { border-color:#93c5fd; box-shadow:0 6px 16px rgba(15,23,42,.06); }
+    .history-item.active { border-color:#60a5fa; background:#eff6ff; }
+    .history-date { font-weight:850; font-size:13px; }
+    .history-meta { color:var(--muted); font-size:11px; margin-top:3px; }
+    .history-amount { text-align:right; font-weight:850; font-size:13px; }
+    .history-amount small { display:block; font-weight:600; color:var(--muted); font-size:10px; }
+    .empty { padding:28px 12px; text-align:center; color:var(--muted); font-size:12px; border:1px dashed #cbd5e1; border-radius:14px; }
+
+    .config-banner {
+      display:none; margin-bottom:18px; padding:14px 16px; border:1px solid #fde68a; background:#fffbeb;
+      color:#78350f; border-radius:14px; line-height:1.5; font-size:12px;
+    }
+    .config-banner.show { display:block; }
+    .config-banner code { background:#fff; padding:2px 5px; border-radius:5px; }
+
+    .locked-note { display:none; padding:10px 12px; border:1px solid #fde68a; background:#fffbeb; color:#92400e; border-radius:11px; font-size:11px; margin-top:10px; }
+    .locked-note.show { display:block; }
+
+    .toast {
+      position:fixed; right:18px; bottom:18px; z-index:100;
+      max-width:min(420px,calc(100vw - 36px)); padding:13px 15px; border-radius:14px;
+      color:#fff; background:#0f172a; box-shadow:0 18px 45px rgba(15,23,42,.22);
+      transform:translateY(18px); opacity:0; pointer-events:none; transition:.2s ease;
+      font-size:12px; line-height:1.45;
+    }
+    .toast.show { transform:translateY(0); opacity:1; }
+    .toast.success { background:#166534; }
+    .toast.error { background:#991b1b; }
+    .toast.warn { background:#92400e; }
+
+    .loading-overlay {
+      position:fixed; inset:0; z-index:90; background:rgba(15,23,42,.35); backdrop-filter:blur(3px);
+      display:none; place-items:center;
+    }
+    .loading-overlay.show { display:grid; }
+    .spinner-card { background:#fff; border-radius:16px; padding:18px 20px; box-shadow:var(--shadow); display:flex; align-items:center; gap:12px; font-size:12px; font-weight:750; }
+    .spinner { width:18px; height:18px; border:3px solid #dbeafe; border-top-color:#2563eb; border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .footer-note { text-align:center; color:var(--muted); font-size:11px; margin-top:18px; }
+
+    @media (max-width: 1180px) {
+      .hero { grid-template-columns:1fr; }
+      .grid-main { grid-template-columns:1fr; }
+      .history-list { max-height:420px; }
+    }
+    @media (max-width: 820px) {
+      .container { padding:16px 12px 40px; }
+      .topbar-inner { padding:12px; }
+      .brand p { display:none; }
+      .form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .field.span-2 { grid-column:span 2; }
+      .money-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .hero-card { padding:20px; }
+    }
+    @media (max-width: 560px) {
+      .topbar-inner { align-items:flex-start; flex-direction:column; }
+      .topbar-actions { width:100%; justify-content:space-between; }
+      .form-grid, .history-tools { grid-template-columns:1fr; }
+      .field.span-2 { grid-column:span 1; }
+      .money-summary { grid-template-columns:1fr; }
+      .card-body { padding:14px; }
+      .card-header { padding:15px 14px; }
+      .history-item { grid-template-columns:1fr; }
+      .history-amount { text-align:left; }
+      .action-bar { justify-content:stretch; }
+      .action-bar .btn { flex:1 1 140px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-mark">CK</div>
+          <div>
+            <h1>Closing Kasir</h1>
+            <p>Closing harian kasir • realtime Firebase</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <div id="syncStatus" class="status warn"><span class="status-dot"></span><span>Menyiapkan koneksi…</span></div>
+          <button id="newClosingBtn" class="btn btn-secondary" type="button">+ Closing Baru</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div id="configBanner" class="config-banner">
+        <strong>Firebase belum dikonfigurasi.</strong><br>
+        Buka file ini, cari <code>firebaseConfig</code>, lalu isi konfigurasi dari Firebase Console. Setelah itu aktifkan <strong>Firestore Database</strong> dan <strong>Anonymous Authentication</strong>.
+      </div>
+
+      <section class="hero">
+        <div class="hero-card">
+          <h2>Closing Harian Kasir</h2>
+          <p>Masukkan transaksi closing per tanggal dan cabang. Perhitungan pemasukan, pengeluaran, selisih, histori, serta sinkronisasi antar perangkat berjalan otomatis.</p>
+        </div>
+        <div class="hero-card" style="display:grid;align-content:center;gap:10px;">
+          <div class="today-chip">
+            <div><div style="font-size:11px;color:#94a3b8;">Hari ini</div><strong id="todayLabel">-</strong></div>
+            <div style="font-size:24px;">📅</div>
+          </div>
+          <div style="font-size:11px;color:#94a3b8;position:relative;z-index:1;">Tanggal besok dan tanggal setelahnya otomatis terkunci.</div>
+        </div>
+      </section>
+
+      <section class="grid-main">
+        <div class="left-col">
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Identitas Closing</h3>
+                <p>Isi identitas kasir, supervisor, cabang, dan tanggal closing.</p>
+              </div>
+              <span id="recordMode" class="status" style="background:#f1f5f9;color:#334155;">Baru</span>
+            </div>
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="closingDate">Tanggal</label>
+                  <input id="closingDate" type="date" />
+                  <div id="futureNote" class="locked-note">Tanggal yang belum berlangsung terkunci. Pilih hari ini atau tanggal sebelumnya.</div>
+                </div>
+                <div class="field">
+                  <label for="branch">Cabang</label>
+                  <select id="branch"></select>
+                </div>
+                <div class="field">
+                  <label for="cashierName">Nama Kasir</label>
+                  <input id="cashierName" type="text" placeholder="Contoh: Ahmad" autocomplete="off" />
+                </div>
+                <div class="field">
+                  <label for="supervisorName">Nama Supervisor</label>
+                  <input id="supervisorName" type="text" placeholder="Contoh: Fikri" autocomplete="off" />
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Pemasukan</h3>
+                <p>Nominal dasar dapat diinput. Pemasukan cash/QRIS akan menyesuaikan pengeluaran sesuai aturan otomatis.</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th style="width:120px">Jenis</th><th>Nominal</th><th>Keterangan</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><strong>Cash</strong></td><td><input id="incomeCash" class="table-input money" type="number" min="0" step="1" placeholder="0" /></td><td><input id="incomeCashNote" class="table-input" type="text" placeholder="Keterangan cash (opsional)" /></td></tr>
+                    <tr><td><strong>QRIS</strong></td><td><input id="incomeQris" class="table-input money" type="number" min="0" step="1" placeholder="0" /></td><td><input id="incomeQrisNote" class="table-input" type="text" placeholder="Keterangan QRIS (opsional)" /></td></tr>
+                    <tr><td><strong>Transfer</strong></td><td><input id="incomeTransfer" class="table-input money" type="number" min="0" step="1" placeholder="0" /></td><td><input id="incomeTransferNote" class="table-input" type="text" placeholder="Keterangan transfer (opsional)" /></td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="hint">
+                <div>⚙️</div>
+                <div><strong>Aturan otomatis:</strong> setiap pengeluaran akan menambah pemasukan <strong>Cash</strong>. Namun, jika keterangan pengeluaran mengandung kata <strong>“bukupay”</strong> dan <strong>“admin”</strong>, nominal pengeluaran tersebut otomatis masuk ke penyesuaian <strong>QRIS</strong>.</div>
+              </div>
+
+              <div class="money-summary">
+                <div class="stat"><div class="label">Cash Dasar</div><div id="cashBaseDisplay" class="value">Rp 0</div></div>
+                <div class="stat primary"><div class="label">Cash Setelah Penyesuaian</div><div id="cashAdjustedDisplay" class="value">Rp 0</div></div>
+                <div class="stat"><div class="label">QRIS Setelah Penyesuaian</div><div id="qrisAdjustedDisplay" class="value">Rp 0</div></div>
+                <div class="stat success"><div class="label">Total Pemasukan</div><div id="totalIncomeDisplay" class="value">Rp 0</div></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Pengeluaran Operasional</h3>
+                <p>Tambahkan sebanyak baris yang dibutuhkan.</p>
+              </div>
+              <button id="addOperationalBtn" class="add-btn" type="button">+ Tambah Pengeluaran</button>
+            </div>
+            <div class="card-body">
+              <div id="operationalRows" class="table-wrap"></div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Pengeluaran Makan / Minum</h3>
+                <p>Masukkan nominal dan keterangan per transaksi.</p>
+              </div>
+              <button id="addMealBtn" class="add-btn" type="button">+ Tambah Pengeluaran</button>
+            </div>
+            <div class="card-body">
+              <div id="mealRows" class="table-wrap"></div>
+              <div class="money-summary" style="grid-template-columns:repeat(2,minmax(0,1fr));">
+                <div class="stat"><div class="label">Total Operasional</div><div id="operationalTotalDisplay" class="value">Rp 0</div></div>
+                <div class="stat warning"><div class="label">Total Makan / Minum</div><div id="mealTotalDisplay" class="value">Rp 0</div></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>Rekap Akhir</h3>
+                <p>Total penjualan dan uang pecah diinput manual. Selisih dihitung otomatis.</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="totalSales">Total Penjualan</label>
+                  <input id="totalSales" class="money" type="number" min="0" step="1" placeholder="0" />
+                </div>
+                <div class="field">
+                  <label for="brokenMoney">Total Uang Pecah</label>
+                  <input id="brokenMoney" class="money" type="number" min="0" step="1" placeholder="0" />
+                </div>
+                <div class="field span-2">
+                  <label>Rumus Selisih</label>
+                  <input id="differenceFormula" type="text" value="Total Penjualan − Total Pemasukan − Total Pengeluaran" disabled />
+                </div>
+              </div>
+
+              <div class="money-summary" style="margin-top:16px;">
+                <div class="stat"><div class="label">Total Pemasukan</div><div id="finalIncomeDisplay" class="value">Rp 0</div></div>
+                <div class="stat"><div class="label">Total Pengeluaran</div><div id="finalExpenseDisplay" class="value">Rp 0</div></div>
+                <div class="stat primary"><div class="label">Total Penjualan</div><div id="finalSalesDisplay" class="value">Rp 0</div></div>
+                <div class="stat danger"><div class="label">Total Selisih</div><div id="differenceDisplay" class="value">Rp 0</div></div>
+              </div>
+
+              <div class="action-bar">
+                <button id="resetBtn" class="btn btn-secondary" type="button">Reset Form</button>
+                <button id="exportExcelBtn" class="btn btn-dark" type="button" disabled>Export Excel</button>
+                <button id="exportPdfBtn" class="btn btn-secondary" type="button" disabled>Export PDF</button>
+                <button id="saveBtn" class="btn btn-primary" type="button">Simpan Closing</button>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <aside class="right-col">
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h3>History Closing</h3>
+                <p>Realtime berdasarkan cabang dan bulan.</p>
+              </div>
+              <span id="historyCount" class="status" style="background:#f1f5f9;color:#334155;">0 data</span>
+            </div>
+            <div class="card-body">
+              <div class="history-tools">
+                <div class="field">
+                  <label for="historyBranch">Cabang</label>
+                  <select id="historyBranch"></select>
+                </div>
+                <div class="field">
+                  <label for="historyMonth">Bulan</label>
+                  <input id="historyMonth" type="month" />
+                </div>
+              </div>
+              <div style="height:12px"></div>
+              <div id="historyList" class="history-list">
+                <div class="empty">Hubungkan Firebase untuk melihat histori closing.</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header"><div><h3>Ekspor Closing</h3><p>Pilih data dari form aktif atau histori.</p></div></div>
+            <div class="card-body">
+              <div class="hint" style="margin-top:0;">
+                <div>📊</div>
+                <div>Excel dibuat sebagai workbook dengan ringkasan closing dan detail transaksi. PDF dibuat dengan layout tabel yang siap dicetak / dikirim.</div>
+              </div>
+              <div style="height:10px"></div>
+              <div style="font-size:11px;color:var(--muted);line-height:1.6;">Nama file otomatis mengikuti format <strong>closing kasir, nama cabang, tanggal, bulan</strong>.</div>
+            </div>
+          </article>
+        </aside>
+      </section>
+
+      <div class="footer-note">Closing Kasir Realtime • Firebase Firestore • Dibuat dalam satu file HTML</div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner-card"><span class="spinner"></span><span id="loadingText">Menyimpan data…</span></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+    import {
+      initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, getDoc, deleteDoc,
+      onSnapshot, query, where, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+    /* ==============================================================
+       1) FIREBASE CONFIG
+       --------------------------------------------------------------
+       Ganti semua nilai di bawah dengan Web App configuration dari
+       Firebase Console project BARU kamu.
+       ==============================================================
+    */
+const firebaseConfig = {
+  apiKey: "AIzaSyDrxsCMdsxqqCtamLbIGnon364v33UnzBI",
+  authDomain: "sistem-closing-kasir-abben.firebaseapp.com",
+  projectId: "sistem-closing-kasir-abben",
+  storageBucket: "sistem-closing-kasir-abben.firebasestorage.app",
+  messagingSenderId: "24893556741",
+  appId: "1:24893556741:web:6b7dda1fe55b674d7ff46c",
+  measurementId: "G-DG6Y439D2V"
+};
+
+    /* ==============================================================
+       2) NAMA 5 CABANG
+       --------------------------------------------------------------
+       Ubah nama di array ini sesuai nama cabang sebenarnya.
+       ==============================================================
+    */
+    const BRANCHES = [
+      "Cabang 1",
+      "Cabang 2",
+      "Cabang 3",
+      "Cabang 4",
+      "Cabang 5"
+    ];
+
+    const TZ = "Asia/Jakarta";
+    const monthNames = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    const currency = new Intl.NumberFormat("id-ID", {
+      style: "currency", currency: "IDR", maximumFractionDigits: 0
+    });
+
+    const $ = (id) => document.getElementById(id);
+    let authUser = null;
+    let unsubscribeHistory = null;
+    let unsubscribeCurrent = null;
+    let currentRecord = null;
+    let activeDocId = "";
+    let toastTimer = null;
+    let isHydrating = false;
+    let formDirty = false;
+
+    const operationalRows = [];
+    const mealRows = [];
+
+    function firebaseConfigured() {
+      return !Object.values(firebaseConfig).some(value => String(value).includes("GANTI_"));
+    }
+
+    let app = null;
+    let auth = null;
+    let db = null;
+
+    if (firebaseConfigured()) {
+      try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = initializeFirestore(app, {
+          localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager()
+          })
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    function localDateKey(date = new Date()) {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit"
+      }).formatToParts(date).reduce((acc, part) => (acc[part.type] = part.value, acc), {});
+      return `${parts.year}-${parts.month}-${parts.day}`;
+    }
+
+    function currentMonthKey() {
+      return localDateKey().slice(0, 7);
+    }
+
+    function formatDateKey(key) {
+      if (!key) return "-";
+      const [y, m, d] = key.split("-").map(Number);
+      return `${d} ${monthNames[m - 1]} ${y}`;
+    }
+
+    function formatMonthKey(key) {
+      if (!key) return "-";
+      const [y, m] = key.split("-").map(Number);
+      return `${monthNames[m - 1]} ${y}`;
+    }
+
+    function money(value) {
+      const n = Number(value || 0);
+      return currency.format(Number.isFinite(n) ? n : 0);
+    }
+
+    function numericInput(id) {
+      const n = Number($(id)?.value || 0);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    }
+
+    function sanitizeId(value) {
+      return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "branch";
+    }
+
+    function documentId(branch, dateKey) {
+      return `${sanitizeId(branch)}__${dateKey}`;
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "").replace(/[&<>'"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" }[c]));
+    }
+
+    function showToast(message, type = "", duration = 3200) {
+      const el = $("toast");
+      el.textContent = message;
+      el.className = `toast show ${type}`.trim();
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { el.className = "toast"; }, duration);
+    }
+
+    function setLoading(show, text = "Menyimpan data…") {
+      $("loadingText").textContent = text;
+      $("loadingOverlay").classList.toggle("show", show);
+    }
+
+    function setStatus(text, mode = "warn") {
+      const el = $("syncStatus");
+      el.className = `status ${mode}`;
+      el.innerHTML = `<span class="status-dot"></span><span>${escapeHtml(text)}</span>`;
+    }
+
+    function addRow(type, data = {}) {
+      const rows = type === "operational" ? operationalRows : mealRows;
+      const row = {
+        id: `${type}-${crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random()}`,
+        amount: Number(data.amount || 0),
+        note: data.note || ""
+      };
+      rows.push(row);
+      renderRows(type);
+      updateCalculations();
+      markDirty();
+    }
+
+    function removeRow(type, id) {
+      const rows = type === "operational" ? operationalRows : mealRows;
+      const index = rows.findIndex(row => row.id === id);
+      if (index >= 0) rows.splice(index, 1);
+      if (rows.length === 0) rows.push({ id: `${type}-empty-${Date.now()}`, amount: 0, note: "" });
+      renderRows(type);
+      updateCalculations();
+      markDirty();
+    }
+
+    function renderRows(type) {
+      const target = type === "operational" ? $("operationalRows") : $("mealRows");
+      const rows = type === "operational" ? operationalRows : mealRows;
+      target.innerHTML = `
+        <table>
+          <thead>
+            <tr><th class="row-index">#</th><th style="width:230px">Nominal</th><th>Keterangan</th><th class="row-actions">Hapus</th></tr>
+          </thead>
+          <tbody>
+            ${rows.map((row, index) => `
+              <tr data-row-id="${escapeHtml(row.id)}">
+                <td class="row-index">${index + 1}</td>
+                <td><input class="table-input money expense-amount" type="number" min="0" step="1" value="${row.amount || ""}" placeholder="0" /></td>
+                <td><input class="table-input expense-note" type="text" value="${escapeHtml(row.note)}" placeholder="Contoh: beli perlengkapan / bukupay admin" /></td>
+                <td class="row-actions"><button class="remove-btn" type="button" title="Hapus baris">×</button></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+
+      target.querySelectorAll("tbody tr").forEach(tr => {
+        const id = tr.dataset.rowId;
+        const row = rows.find(item => item.id === id);
+        tr.querySelector(".expense-amount").addEventListener("input", (e) => {
+          row.amount = Math.max(0, Number(e.target.value || 0));
+          updateCalculations(); markDirty();
+        });
+        tr.querySelector(".expense-note").addEventListener("input", (e) => {
+          row.note = e.target.value; updateCalculations(); markDirty();
+        });
+        tr.querySelector(".remove-btn").addEventListener("click", () => removeRow(type, id));
+      });
+    }
+
+    function isQrisExpense(note) {
+      const text = String(note || "").toLowerCase();
+      return /buku\s*pay|bukupay/.test(text) && /\badmin\b/.test(text);
+    }
+
+    function getExpenses() {
+      return [...operationalRows, ...mealRows]
+        .map(row => ({ amount: Number(row.amount || 0), note: row.note || "", qrisAdjustment: isQrisExpense(row.note) }))
+        .filter(row => row.amount > 0 || row.note.trim());
+    }
+
+    function computeTotals() {
+      const baseCash = numericInput("incomeCash");
+      const baseQris = numericInput("incomeQris");
+      const transfer = numericInput("incomeTransfer");
+      const expenses = getExpenses();
+      const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+      const qrisAdjustment = expenses.filter(e => e.qrisAdjustment).reduce((sum, e) => sum + e.amount, 0);
+      const cashAdjustment = totalExpenses - qrisAdjustment;
+      const adjustedCash = baseCash + cashAdjustment;
+      const adjustedQris = baseQris + qrisAdjustment;
+      const totalIncome = adjustedCash + adjustedQris + transfer;
+      const totalSales = numericInput("totalSales");
+      const brokenMoney = numericInput("brokenMoney");
+      const difference = totalSales - totalIncome - totalExpenses;
+      const operationalTotal = operationalRows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const mealTotal = mealRows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      return {
+        baseCash, baseQris, transfer, totalExpenses, qrisAdjustment, cashAdjustment,
+        adjustedCash, adjustedQris, totalIncome, totalSales, brokenMoney, difference,
+        operationalTotal, mealTotal, expenses
+      };
+    }
+
+    function updateCalculations() {
+      const totals = computeTotals();
+      $("cashBaseDisplay").textContent = money(totals.baseCash);
+      $("cashAdjustedDisplay").textContent = money(totals.adjustedCash);
+      $("qrisAdjustedDisplay").textContent = money(totals.adjustedQris);
+      $("totalIncomeDisplay").textContent = money(totals.totalIncome);
+      $("operationalTotalDisplay").textContent = money(totals.operationalTotal);
+      $("mealTotalDisplay").textContent = money(totals.mealTotal);
+      $("finalIncomeDisplay").textContent = money(totals.totalIncome);
+      $("finalExpenseDisplay").textContent = money(totals.totalExpenses);
+      $("finalSalesDisplay").textContent = money(totals.totalSales);
+      $("differenceDisplay").textContent = money(totals.difference);
+    }
+
+    function setTodayUI() {
+      const today = localDateKey();
+      $("closingDate").max = today;
+      $("historyMonth").max = today.slice(0, 7);
+      $("todayLabel").textContent = formatDateKey(today);
+    }
+
+    function populateBranches() {
+      const main = $("branch");
+      const history = $("historyBranch");
+      main.innerHTML = BRANCHES.map((branch, i) => `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`).join("");
+      history.innerHTML = BRANCHES.map((branch, i) => `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`).join("");
+      const lastBranch = localStorage.getItem("closingKasirBranch") || BRANCHES[0];
+      if (BRANCHES.includes(lastBranch)) {
+        main.value = lastBranch;
+        history.value = lastBranch;
+      }
+    }
+
+    function defaultFormRows() {
+      operationalRows.splice(0, operationalRows.length, { id: `operational-${Date.now()}`, amount: 0, note: "" });
+      mealRows.splice(0, mealRows.length, { id: `meal-${Date.now()}`, amount: 0, note: "" });
+      renderRows("operational");
+      renderRows("meal");
+    }
+
+    function setFormEnabled(enabled) {
+      document.querySelectorAll("input, select, textarea, button").forEach(el => {
+        if (["exportExcelBtn", "exportPdfBtn", "newClosingBtn"].includes(el.id)) return;
+        el.disabled = !enabled;
+      });
+      $("closingDate").disabled = false;
+      $("branch").disabled = false;
+      $("saveBtn").disabled = !enabled;
+    }
+
+    function validateDate() {
+      const date = $("closingDate").value;
+      const today = localDateKey();
+      const future = date > today;
+      $("futureNote").classList.toggle("show", future);
+      if (future) {
+        showToast("Tanggal masa depan belum bisa digunakan untuk closing.", "warn");
+        return false;
+      }
+      return !!date;
+    }
+
+    function markDirty() {
+      if (isHydrating) return;
+      formDirty = true;
+      $("recordMode").textContent = activeDocId ? "Perubahan" : "Baru";
+    }
+
+    function clearCurrentRecord() {
+      currentRecord = null;
+      activeDocId = "";
+      formDirty = false;
+      $("recordMode").textContent = "Baru";
+      $("exportExcelBtn").disabled = true;
+      $("exportPdfBtn").disabled = true;
+    }
+
+    function resetForm(dateKey = localDateKey(), branch = $("branch").value || BRANCHES[0]) {
+      isHydrating = true;
+      $("closingDate").value = dateKey;
+      $("branch").value = branch;
+      $("cashierName").value = "";
+      $("supervisorName").value = "";
+      $("incomeCash").value = "";
+      $("incomeCashNote").value = "";
+      $("incomeQris").value = "";
+      $("incomeQrisNote").value = "";
+      $("incomeTransfer").value = "";
+      $("incomeTransferNote").value = "";
+      $("totalSales").value = "";
+      $("brokenMoney").value = "";
+      defaultFormRows();
+      clearCurrentRecord();
+      updateCalculations();
+      isHydrating = false;
+      validateDate();
+      if (typeof updateDeleteVisibility === "function") updateDeleteVisibility();
+    }
+
+    function serializeRows(rows) {
+      return rows.map(row => ({ amount: Number(row.amount || 0), note: String(row.note || "") }));
+    }
+
+    function collectPayload() {
+      const dateKey = $("closingDate").value;
+      const branch = $("branch").value;
+      const monthKey = dateKey.slice(0, 7);
+      const totals = computeTotals();
+      return {
+        schemaVersion: 1,
+        dateKey,
+        monthKey,
+        branchId: sanitizeId(branch),
+        branch,
+        cashierName: $("cashierName").value.trim(),
+        supervisorName: $("supervisorName").value.trim(),
+        income: {
+          cash: totals.baseCash,
+          cashNote: $("incomeCashNote").value.trim(),
+          qris: totals.baseQris,
+          qrisNote: $("incomeQrisNote").value.trim(),
+          transfer: totals.transfer,
+          transferNote: $("incomeTransferNote").value.trim(),
+          cashAdjusted: totals.adjustedCash,
+          qrisAdjusted: totals.adjustedQris,
+          qrisAdjustment: totals.qrisAdjustment
+        },
+        operationalExpenses: serializeRows(operationalRows),
+        mealExpenses: serializeRows(mealRows),
+        totals: {
+          totalIncome: totals.totalIncome,
+          totalOperational: totals.operationalTotal,
+          totalMeal: totals.mealTotal,
+          totalExpenses: totals.totalExpenses,
+          totalSales: totals.totalSales,
+          difference: totals.difference,
+          brokenMoney: totals.brokenMoney
+        },
+        updatedAt: serverTimestamp(),
+        updatedBy: authUser?.uid || "anonymous"
+      };
+    }
+
+    function validatePayload(payload) {
+      if (!payload.dateKey) return "Tanggal wajib diisi.";
+      if (payload.dateKey > localDateKey()) return "Tanggal masa depan belum bisa digunakan.";
+      if (!payload.branch) return "Cabang wajib dipilih.";
+      if (!payload.cashierName) return "Nama kasir wajib diisi.";
+      if (!payload.supervisorName) return "Nama supervisor wajib diisi.";
+      return "";
+    }
+
+    async function saveClosing() {
+      if (!validateDate()) return;
+      if (!db || !authUser) {
+        showToast("Firebase belum siap. Periksa konfigurasi Firebase dan koneksi.", "error", 4500);
+        return;
+      }
+      const payload = collectPayload();
+      const error = validatePayload(payload);
+      if (error) { showToast(error, "error"); return; }
+
+      const id = documentId(payload.branch, payload.dateKey);
+      setLoading(true, "Menyimpan closing ke Firebase…");
+      try {
+        await setDoc(doc(db, "closings", id), payload, { merge: true });
+        activeDocId = id;
+        currentRecord = { ...payload, id };
+        formDirty = false;
+        $("recordMode").textContent = "Tersimpan";
+        $("exportExcelBtn").disabled = false;
+        $("exportPdfBtn").disabled = false;
+        localStorage.setItem("closingKasirBranch", payload.branch);
+        updateDeleteVisibility();
+        showToast("Closing berhasil disimpan dan tersinkron realtime.", "success");
+      } catch (err) {
+        console.error(err);
+        showToast(`Gagal menyimpan: ${err.message || "periksa Firebase"}`, "error", 5000);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function loadRecord(branch, dateKey, silent = false) {
+      if (!db) return;
+      const id = documentId(branch, dateKey);
+      try {
+        const snap = await getDoc(doc(db, "closings", id));
+        if (!snap.exists()) {
+          if (!silent) {
+            resetForm(dateKey, branch);
+            showToast("Belum ada closing untuk tanggal tersebut. Silakan isi dan simpan.", "warn", 3600);
+          }
+          return;
+        }
+        applyRecord({ ...snap.data(), id: snap.id });
+      } catch (err) {
+        console.error(err);
+        if (!silent) showToast(`Gagal membaca data: ${err.message || "unknown error"}`, "error", 5000);
+      }
+    }
+
+    function applyRecord(record) {
+      isHydrating = true;
+      currentRecord = record;
+      activeDocId = record.id || documentId(record.branch, record.dateKey);
+      $("closingDate").value = record.dateKey || localDateKey();
+      $("branch").value = record.branch || BRANCHES[0];
+      $("cashierName").value = record.cashierName || "";
+      $("supervisorName").value = record.supervisorName || "";
+      $("incomeCash").value = record.income?.cash || "";
+      $("incomeCashNote").value = record.income?.cashNote || "";
+      $("incomeQris").value = record.income?.qris || "";
+      $("incomeQrisNote").value = record.income?.qrisNote || "";
+      $("incomeTransfer").value = record.income?.transfer || "";
+      $("incomeTransferNote").value = record.income?.transferNote || "";
+      $("totalSales").value = record.totals?.totalSales || "";
+      $("brokenMoney").value = record.totals?.brokenMoney || "";
+      operationalRows.splice(0, operationalRows.length, ...(record.operationalExpenses || []).map((r, i) => ({ id:`op-${Date.now()}-${i}`, amount:Number(r.amount || 0), note:r.note || "" })));
+      mealRows.splice(0, mealRows.length, ...(record.mealExpenses || []).map((r, i) => ({ id:`meal-${Date.now()}-${i}`, amount:Number(r.amount || 0), note:r.note || "" })));
+      if (!operationalRows.length) operationalRows.push({ id:`op-${Date.now()}`, amount:0, note:"" });
+      if (!mealRows.length) mealRows.push({ id:`meal-${Date.now()}`, amount:0, note:"" });
+      renderRows("operational");
+      renderRows("meal");
+      updateCalculations();
+      formDirty = false;
+      $("recordMode").textContent = "Tersimpan";
+      $("exportExcelBtn").disabled = false;
+      $("exportPdfBtn").disabled = false;
+      isHydrating = false;
+      validateDate();
+    }
+
+    function loadActiveFromHistory(record) {
+      applyRecord(record);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      showToast(`Membuka closing ${formatDateKey(record.dateKey)}.`, "success", 2400);
+    }
+
+    function subscribeCurrentRecord() {
+      if (unsubscribeCurrent) { unsubscribeCurrent(); unsubscribeCurrent = null; }
+      if (!db) return;
+      const branch = $("branch").value;
+      const dateKey = $("closingDate").value;
+      if (!branch || !dateKey || dateKey > localDateKey()) return;
+      const ref = doc(db, "closings", documentId(branch, dateKey));
+      unsubscribeCurrent = onSnapshot(ref, { includeMetadataChanges: true }, (snap) => {
+        if (!snap.exists()) return;
+        const remote = { ...snap.data(), id: snap.id };
+        if (snap.metadata.hasPendingWrites) {
+          setStatus("Menyimpan ke server…", "warn");
+          return;
+        }
+        setStatus("Realtime tersambung", "ok");
+        if (!formDirty || activeDocId === snap.id && currentRecord?.dateKey === remote.dateKey && currentRecord?.updatedBy === remote.updatedBy) {
+          if (!formDirty) applyRecord(remote);
+          currentRecord = remote;
+        } else {
+          showToast("Ada perubahan dari perangkat lain. Pilih data dari histori untuk memuat versi terbaru.", "warn", 5000);
+        }
+      }, (err) => {
+        console.error(err);
+        setStatus("Koneksi bermasalah", "error");
+      });
+    }
+
+    function subscribeHistory() {
+      if (unsubscribeHistory) { unsubscribeHistory(); unsubscribeHistory = null; }
+      if (!db || !authUser) {
+        $("historyList").innerHTML = `<div class="empty">Firebase belum tersambung.</div>`;
+        return;
+      }
+      const branch = $("historyBranch").value;
+      const month = $("historyMonth").value || currentMonthKey();
+      $("historyMonth").value = month;
+      const q = query(collection(db, "closings"), where("branchId", "==", sanitizeId(branch)));
+      unsubscribeHistory = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+        const records = [];
+        snapshot.forEach(snap => {
+          const data = snap.data();
+          if (data.monthKey === month) records.push({ ...data, id: snap.id });
+        });
+        records.sort((a,b) => String(b.dateKey).localeCompare(String(a.dateKey)));
+        renderHistory(records);
+        setStatus(snapshot.metadata.fromCache ? "Mode cache/offline" : "Realtime tersambung", snapshot.metadata.fromCache ? "warn" : "ok");
+      }, (err) => {
+        console.error(err);
+        $("historyList").innerHTML = `<div class="empty">Gagal memuat histori: ${escapeHtml(err.message || "unknown error")}</div>`;
+        setStatus("Koneksi bermasalah", "error");
+      });
+    }
+
+    function renderHistory(records) {
+      $("historyCount").textContent = `${records.length} data`;
+      if (!records.length) {
+        $("historyList").innerHTML = `<div class="empty">Belum ada closing pada ${escapeHtml(formatMonthKey($("historyMonth").value))} untuk ${escapeHtml($("historyBranch").value)}.</div>`;
+        return;
+      }
+      $("historyList").innerHTML = records.map(record => `
+        <div class="history-item ${record.id === activeDocId ? "active" : ""}" data-id="${escapeHtml(record.id)}">
+          <div>
+            <div class="history-date">${escapeHtml(formatDateKey(record.dateKey))}</div>
+            <div class="history-meta">Kasir: ${escapeHtml(record.cashierName || "-")} • SPV: ${escapeHtml(record.supervisorName || "-")}</div>
+            <div class="history-meta">${escapeHtml(record.branch || "-")}</div>
+          </div>
+          <div class="history-amount">${money(record.totals?.totalSales || 0)}<small>Penjualan</small></div>
+        </div>
+      `).join("");
+      $("historyList").querySelectorAll(".history-item").forEach(item => {
+        item.addEventListener("click", async () => {
+          const id = item.dataset.id;
+          const record = records.find(r => r.id === id);
+          if (!record) return;
+          loadActiveFromHistory(record);
+          subscribeCurrentRecord();
+        });
+      });
+    }
+
+    function formatExportBase(record) {
+      const [y,m,d] = record.dateKey.split("-").map(Number);
+      const dateName = String(d).padStart(2,"0");
+      return `closing kasir ${record.branch}, ${dateName} ${monthNames[m-1]} ${y}`.replace(/[\\/:*?"<>|]/g, "-");
+    }
+
+    function buildExportRows(record) {
+      const totals = record.totals || {};
+      const income = record.income || {};
+      const operational = record.operationalExpenses || [];
+      const meals = record.mealExpenses || [];
+      return {
+        summary: [
+          ["CLOSING KASIR"],
+          ["Tanggal", formatDateKey(record.dateKey)],
+          ["Bulan", formatMonthKey(record.monthKey)],
+          ["Cabang", record.branch || ""],
+          ["Nama Kasir", record.cashierName || ""],
+          ["Nama Supervisor", record.supervisorName || ""],
+          [],
+          ["PEMASUKAN"],
+          ["Cash Dasar", income.cash || 0],
+          ["Penyesuaian Cash", Math.max(0, (income.cashAdjusted || 0) - (income.cash || 0))],
+          ["Cash Setelah Penyesuaian", income.cashAdjusted || 0],
+          ["QRIS Dasar", income.qris || 0],
+          ["Penyesuaian QRIS (Bukupay + Admin)", income.qrisAdjustment || 0],
+          ["QRIS Setelah Penyesuaian", income.qrisAdjusted || 0],
+          ["Transfer", income.transfer || 0],
+          ["TOTAL PEMASUKAN", totals.totalIncome || 0],
+          [],
+          ["PENGELUARAN"],
+          ["Total Operasional", totals.totalOperational || 0],
+          ["Total Makan/Minum", totals.totalMeal || 0],
+          ["TOTAL PENGELUARAN", totals.totalExpenses || 0],
+          [],
+          ["REKAP AKHIR"],
+          ["Total Penjualan", totals.totalSales || 0],
+          ["Total Selisih", totals.difference || 0],
+          ["Total Uang Pecah", totals.brokenMoney || 0]
+        ],
+        details: [
+          ["Jenis", "Kategori", "Nominal", "Keterangan"],
+          ["Pemasukan", "Cash", income.cash || 0, income.cashNote || ""],
+          ["Pemasukan", "QRIS", income.qris || 0, income.qrisNote || ""],
+          ["Pemasukan", "Transfer", income.transfer || 0, income.transferNote || ""],
+          ...operational.map(r => ["Pengeluaran", "Operasional", Number(r.amount || 0), r.note || ""]),
+          ...meals.map(r => ["Pengeluaran", "Makan/Minum", Number(r.amount || 0), r.note || ""])
+        ]
+      };
+    }
+
+    function exportExcel() {
+      const record = currentRecord || collectPayload();
+      if (!record?.dateKey || !record?.branch) { showToast("Data closing belum siap untuk diekspor.", "warn"); return; }
+      if (!window.XLSX) { showToast("Library Excel belum termuat. Coba refresh halaman.", "error"); return; }
+      const rows = buildExportRows(record);
+      const wb = XLSX.utils.book_new();
+      const ws1 = XLSX.utils.aoa_to_sheet(rows.summary);
+      const ws2 = XLSX.utils.aoa_to_sheet(rows.details);
+      ws1["!cols"] = [{wch:34}, {wch:30}, {wch:18}, {wch:55}];
+      ws2["!cols"] = [{wch:16}, {wch:24}, {wch:18}, {wch:65}];
+      XLSX.utils.book_append_sheet(wb, ws1, "Closing");
+      XLSX.utils.book_append_sheet(wb, ws2, "Detail");
+      XLSX.writeFile(wb, `${formatExportBase(record)}.xlsx`, { compression: true });
+      showToast("File Excel berhasil dibuat.", "success");
+    }
+
+    function exportPdf() {
+      const record = currentRecord || collectPayload();
+      if (!record?.dateKey || !record?.branch) { showToast("Data closing belum siap untuk diekspor.", "warn"); return; }
+      const jsPDFCtor = window.jspdf?.jsPDF;
+      if (!jsPDFCtor) { showToast("Library PDF belum termuat. Coba refresh halaman.", "error"); return; }
+      const docPdf = new jsPDFCtor({ unit: "mm", format: "a4" });
+      const rows = buildExportRows(record);
+      docPdf.setFontSize(16); docPdf.setFont("helvetica", "bold");
+      docPdf.text("CLOSING KASIR", 14, 16);
+      docPdf.setFontSize(9); docPdf.setFont("helvetica", "normal");
+      docPdf.text(`${record.branch} • ${formatDateKey(record.dateKey)}`, 14, 22);
+      docPdf.text(`Kasir: ${record.cashierName || "-"} • Supervisor: ${record.supervisorName || "-"}`, 14, 27);
+
+      const summaryRows = rows.summary
+        .filter(row => row.length >= 2)
+        .map(row => [String(row[0]), typeof row[1] === "number" ? money(row[1]) : String(row[1] ?? "")]);
+
+      docPdf.autoTable({
+        startY: 33,
+        head: [["Ringkasan", "Nilai"]],
+        body: summaryRows,
+        theme: "grid",
+        styles: { fontSize: 8, cellPadding: 2.2 },
+        headStyles: { fontStyle: "bold" },
+        columnStyles: { 0: { cellWidth: 72 }, 1: { cellWidth: 105, halign: "right" } }
+      });
+
+      const y = (docPdf.lastAutoTable?.finalY || 70) + 8;
+      const detailRows = rows.details.slice(1).map(r => [r[0], r[1], money(r[2]), r[3]]);
+      docPdf.autoTable({
+        startY: y,
+        head: [rows.details[0]],
+        body: detailRows,
+        theme: "striped",
+        styles: { fontSize: 7.5, cellPadding: 2 },
+        headStyles: { fontStyle: "bold" },
+        columnStyles: { 0:{cellWidth:24}, 1:{cellWidth:33}, 2:{cellWidth:34,halign:"right"}, 3:{cellWidth:89} },
+        didDrawPage: ({ pageNumber }) => {
+          docPdf.setFontSize(7); docPdf.setTextColor(100);
+          docPdf.text(`Closing Kasir • ${record.branch} • Halaman ${pageNumber}`, 14, 289);
+          docPdf.setTextColor(0);
+        }
+      });
+      docPdf.save(`${formatExportBase(record)}.pdf`);
+      showToast("File PDF berhasil dibuat.", "success");
+    }
+
+    async function deleteCurrent() {
+      if (!db || !activeDocId) { showToast("Pilih closing tersimpan terlebih dahulu.", "warn"); return; }
+      const ok = confirm(`Hapus closing ${formatDateKey($("closingDate").value)} untuk ${$("branch").value}?`);
+      if (!ok) return;
+      setLoading(true, "Menghapus closing…");
+      try {
+        await deleteDoc(doc(db, "closings", activeDocId));
+        resetForm(localDateKey(), $("branch").value);
+        showToast("Closing berhasil dihapus.", "success");
+      } catch (err) {
+        console.error(err);
+        showToast(`Gagal menghapus: ${err.message || "unknown error"}`, "error", 5000);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function setupFirebase() {
+      if (!firebaseConfigured() || !auth || !db) {
+        $("configBanner").classList.add("show");
+        $("historyList").innerHTML = `<div class="empty">Masukkan konfigurasi Firebase di bagian <strong>firebaseConfig</strong> pada file HTML.</div>`;
+        setStatus("Firebase belum dikonfigurasi", "warn");
+        return;
+      }
+      try {
+        setStatus("Menghubungkan Firebase…", "warn");
+        await signInAnonymously(auth);
+        onAuthStateChanged(auth, (user) => {
+          authUser = user || null;
+          if (authUser) {
+            setStatus("Realtime tersambung", "ok");
+            subscribeHistory();
+            subscribeCurrentRecord();
+          }
+        });
+      } catch (err) {
+        console.error(err);
+        setStatus("Firebase gagal tersambung", "error");
+        showToast(`Firebase Auth gagal: ${err.message || "aktifkan Anonymous Authentication"}`, "error", 6000);
+      }
+    }
+
+    function bindEvents() {
+      ["incomeCash","incomeQris","incomeTransfer","totalSales","brokenMoney"].forEach(id => {
+        $(id).addEventListener("input", () => { updateCalculations(); markDirty(); });
+      });
+      ["incomeCashNote","incomeQrisNote","incomeTransferNote","cashierName","supervisorName"].forEach(id => {
+        $(id).addEventListener("input", markDirty);
+      });
+      $("closingDate").addEventListener("change", async () => {
+        if (!validateDate()) return;
+        markDirty();
+        subscribeCurrentRecord();
+        if (db && authUser) await loadRecord($("branch").value, $("closingDate").value, false);
+      });
+      $("branch").addEventListener("change", async () => {
+        localStorage.setItem("closingKasirBranch", $("branch").value);
+        markDirty();
+        subscribeCurrentRecord();
+        if (db && authUser && validateDate()) await loadRecord($("branch").value, $("closingDate").value, false);
+        $("historyBranch").value = $("branch").value;
+        subscribeHistory();
+      });
+      $("historyBranch").addEventListener("change", subscribeHistory);
+      $("historyMonth").addEventListener("change", subscribeHistory);
+      $("addOperationalBtn").addEventListener("click", () => addRow("operational"));
+      $("addMealBtn").addEventListener("click", () => addRow("meal"));
+      $("saveBtn").addEventListener("click", saveClosing);
+      $("exportExcelBtn").addEventListener("click", exportExcel);
+      $("exportPdfBtn").addEventListener("click", exportPdf);
+      $("resetBtn").addEventListener("click", () => {
+        if (formDirty && !confirm("Perubahan yang belum disimpan akan hilang. Lanjutkan?")) return;
+        resetForm(localDateKey(), $("branch").value);
+        subscribeCurrentRecord();
+      });
+      $("newClosingBtn").addEventListener("click", () => {
+        if (formDirty && !confirm("Perubahan yang belum disimpan akan hilang. Buat closing baru?")) return;
+        resetForm(localDateKey(), $("branch").value);
+        subscribeCurrentRecord();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+      window.addEventListener("online", () => setStatus("Koneksi internet kembali", "ok"));
+      window.addEventListener("offline", () => setStatus("Offline • menunggu sinkronisasi", "warn"));
+    }
+
+    // Tambahkan opsi hapus yang tidak mengganggu layout utama melalui tombol kecil di header.
+    const deleteBtn = document.createElement("button");
+    deleteBtn.id = "deleteClosingBtn";
+    deleteBtn.type = "button";
+    deleteBtn.className = "btn btn-danger";
+    deleteBtn.textContent = "Hapus Closing";
+    deleteBtn.style.display = "none";
+    $("exportPdfBtn").insertAdjacentElement("afterend", deleteBtn);
+    deleteBtn.addEventListener("click", deleteCurrent);
+
+    function updateDeleteVisibility() {
+      deleteBtn.style.display = activeDocId ? "inline-flex" : "none";
+    }
+    const originalApplyRecord = applyRecord;
+    // Keep delete button state in sync when records are opened.
+    // The original function remains the source of truth for record hydration.
+    applyRecord = function(record) { originalApplyRecord(record); updateDeleteVisibility(); };
+
+    setTodayUI();
+    populateBranches();
+    $("historyMonth").value = currentMonthKey();
+    resetForm(localDateKey(), $("branch").value || BRANCHES[0]);
+    bindEvents();
+    updateCalculations();
+    setupFirebase();
+  </script>
+</body>
+</html>
