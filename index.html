@@ -128,6 +128,7 @@
     input:focus, select:focus, textarea:focus { border-color: #60a5fa; box-shadow: 0 0 0 4px rgba(37,99,235,.10); }
     input[disabled], select[disabled] { background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
     .money { text-align:right; font-variant-numeric: tabular-nums; }
+    .money-input { font-variant-numeric: tabular-nums; }
 
     .section-title { display:flex; align-items:center; justify-content:space-between; gap:12px; margin: 0 0 12px; }
     .section-title h4 { margin:0; font-size:14px; }
@@ -146,7 +147,7 @@
     .stat.danger { background:#fef2f2; border-color:#fecaca; }
 
     .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:14px; }
-    table { width:100%; border-collapse:collapse; min-width:680px; }
+    table { width:100%; border-collapse:collapse; min-width:760px; }
     th, td { padding:10px 11px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
     th { background:#f8fafc; color:#475569; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
     td { font-size:12px; }
@@ -345,9 +346,9 @@
                     <tr><th style="width:120px">Jenis</th><th>Nominal</th><th>Keterangan</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td><strong>Cash</strong></td><td><input id="incomeCash" class="table-input money" type="number" min="0" step="1" placeholder="0" /></td><td><input id="incomeCashNote" class="table-input" type="text" placeholder="Keterangan cash (opsional)" /></td></tr>
-                    <tr><td><strong>QRIS</strong></td><td><input id="incomeQris" class="table-input money" type="number" min="0" step="1" placeholder="0" /></td><td><input id="incomeQrisNote" class="table-input" type="text" placeholder="Keterangan QRIS (opsional)" /></td></tr>
-                    <tr><td><strong>Transfer</strong></td><td><input id="incomeTransfer" class="table-input money" type="number" min="0" step="1" placeholder="0" /></td><td><input id="incomeTransferNote" class="table-input" type="text" placeholder="Keterangan transfer (opsional)" /></td></tr>
+                    <tr><td><strong>Cash</strong></td><td><input id="incomeCash" class="table-input money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" /></td><td><input id="incomeCashNote" class="table-input" type="text" placeholder="Keterangan cash (opsional)" /></td></tr>
+                    <tr><td><strong>QRIS</strong></td><td><input id="incomeQris" class="table-input money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" /></td><td><input id="incomeQrisNote" class="table-input" type="text" placeholder="Keterangan QRIS (opsional)" /></td></tr>
+                    <tr><td><strong>Transfer</strong></td><td><input id="incomeTransfer" class="table-input money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" /></td><td><input id="incomeTransferNote" class="table-input" type="text" placeholder="Keterangan transfer (opsional)" /></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -407,11 +408,11 @@
               <div class="form-grid">
                 <div class="field">
                   <label for="totalSales">Total Penjualan</label>
-                  <input id="totalSales" class="money" type="number" min="0" step="1" placeholder="0" />
+                  <input id="totalSales" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
                 </div>
                 <div class="field">
                   <label for="brokenMoney">Total Uang Pecah</label>
-                  <input id="brokenMoney" class="money" type="number" min="0" step="1" placeholder="0" />
+                  <input id="brokenMoney" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
                 </div>
                 <div class="field span-2">
                   <label>Rumus Selisih</label>
@@ -512,17 +513,16 @@ const firebaseConfig = {
 };
 
     /* ==============================================================
-       2) NAMA 5 CABANG
+       2) NAMA CABANG
        --------------------------------------------------------------
        Ubah nama di array ini sesuai nama cabang sebenarnya.
        ==============================================================
     */
     const BRANCHES = [
-      "Cabang 1",
-      "Cabang 2",
-      "Cabang 3",
-      "Cabang 4",
-      "Cabang 5"
+      "Ayahanda",
+      "Setiabudi",
+      "Ringroad",
+      "Wahid Hasyim"
     ];
 
     const TZ = "Asia/Jakarta";
@@ -598,8 +598,53 @@ const firebaseConfig = {
     }
 
     function numericInput(id) {
-      const n = Number($(id)?.value || 0);
+      const value = String($(id)?.value || "");
+      const digits = value.replace(/\D/g, "");
+      const n = Number(digits || 0);
       return Number.isFinite(n) && n > 0 ? n : 0;
+    }
+
+    function formatRupiahInputValue(value) {
+      const digits = String(value ?? "").replace(/\D/g, "");
+      if (!digits) return "";
+      return `Rp ${Number(digits).toLocaleString("id-ID")}`;
+    }
+
+    function formatRupiahInputElement(el, preserveCaret = true) {
+      if (!el) return;
+      const oldValue = String(el.value || "");
+      const oldCaret = typeof el.selectionStart === "number" ? el.selectionStart : oldValue.length;
+      const digitsBeforeCaret = oldValue.slice(0, oldCaret).replace(/\D/g, "").length;
+      const formatted = formatRupiahInputValue(oldValue);
+      el.value = formatted;
+      if (!preserveCaret || document.activeElement !== el) return;
+      let caret = 0;
+      let seenDigits = 0;
+      while (caret < formatted.length && seenDigits < digitsBeforeCaret) {
+        if (/\d/.test(formatted[caret])) seenDigits++;
+        caret++;
+      }
+      el.setSelectionRange(caret, caret);
+    }
+
+    function setRupiahInputValue(id, value) {
+      const el = $(id);
+      if (el) el.value = formatRupiahInputValue(value);
+    }
+
+    function bindRupiahInput(el) {
+      if (!el || el.dataset.rupiahBound === "1") return;
+      el.dataset.rupiahBound = "1";
+      el.addEventListener("input", () => {
+        formatRupiahInputElement(el, true);
+      });
+      el.addEventListener("blur", () => {
+        formatRupiahInputElement(el, false);
+      });
+    }
+
+    function bindAllRupiahInputs() {
+      document.querySelectorAll(".money-input").forEach(bindRupiahInput);
     }
 
     function sanitizeId(value) {
@@ -633,10 +678,29 @@ const firebaseConfig = {
       el.innerHTML = `<span class="status-dot"></span><span>${escapeHtml(text)}</span>`;
     }
 
+    function firebaseErrorLabel(error) {
+      const code = String(error?.code || "").toLowerCase();
+      if (!navigator.onLine || code.includes("network-request-failed")) return "Internet offline • menunggu koneksi";
+      if (code.includes("permission-denied")) return "Akses Firestore ditolak";
+      if (code.includes("unauthenticated")) return "Autentikasi Firebase gagal";
+      if (code.includes("failed-precondition")) return "Konfigurasi Firestore perlu dicek";
+      if (code.includes("unavailable")) return "Server Firebase tidak tersedia sementara";
+      if (code.includes("deadline-exceeded")) return "Server Firebase terlalu lama merespons";
+      if (code.includes("not-found")) return "Data Firebase tidak ditemukan";
+      return "Firebase mengalami kendala";
+    }
+
+    function handleFirebaseError(error, context = "Firebase") {
+      console.error(context, error);
+      const label = firebaseErrorLabel(error);
+      setStatus(label, navigator.onLine ? "error" : "warn");
+    }
+
     function addRow(type, data = {}) {
       const rows = type === "operational" ? operationalRows : mealRows;
       const row = {
         id: `${type}-${crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random()}`,
+        name: data.name || "",
         amount: Number(data.amount || 0),
         note: data.note || ""
       };
@@ -650,7 +714,7 @@ const firebaseConfig = {
       const rows = type === "operational" ? operationalRows : mealRows;
       const index = rows.findIndex(row => row.id === id);
       if (index >= 0) rows.splice(index, 1);
-      if (rows.length === 0) rows.push({ id: `${type}-empty-${Date.now()}`, amount: 0, note: "" });
+      if (rows.length === 0) rows.push({ id: `${type}-empty-${Date.now()}`, name: "", amount: 0, note: "" });
       renderRows(type);
       updateCalculations();
       markDirty();
@@ -662,13 +726,14 @@ const firebaseConfig = {
       target.innerHTML = `
         <table>
           <thead>
-            <tr><th class="row-index">#</th><th style="width:230px">Nominal</th><th>Keterangan</th><th class="row-actions">Hapus</th></tr>
+            <tr><th class="row-index">#</th><th style="width:220px">Nama</th><th style="width:230px">Nominal</th><th>Keterangan</th><th class="row-actions">Hapus</th></tr>
           </thead>
           <tbody>
             ${rows.map((row, index) => `
               <tr data-row-id="${escapeHtml(row.id)}">
                 <td class="row-index">${index + 1}</td>
-                <td><input class="table-input money expense-amount" type="number" min="0" step="1" value="${row.amount || ""}" placeholder="0" /></td>
+                <td><input class="table-input expense-name" type="text" value="${escapeHtml(row.name || "")}" placeholder="Contoh: Ahmad" autocomplete="off" /></td>
+                <td><input class="table-input money money-input expense-amount" type="text" inputmode="numeric" autocomplete="off" value="${escapeHtml(formatRupiahInputValue(row.amount))}" placeholder="Rp 0" /></td>
                 <td><input class="table-input expense-note" type="text" value="${escapeHtml(row.note)}" placeholder="Contoh: beli perlengkapan / bukupay admin" /></td>
                 <td class="row-actions"><button class="remove-btn" type="button" title="Hapus baris">×</button></td>
               </tr>
@@ -680,15 +745,31 @@ const firebaseConfig = {
       target.querySelectorAll("tbody tr").forEach(tr => {
         const id = tr.dataset.rowId;
         const row = rows.find(item => item.id === id);
-        tr.querySelector(".expense-amount").addEventListener("input", (e) => {
-          row.amount = Math.max(0, Number(e.target.value || 0));
+        const nameInput = tr.querySelector(".expense-name");
+        const amountInput = tr.querySelector(".expense-amount");
+        const noteInput = tr.querySelector(".expense-note");
+
+        nameInput.addEventListener("input", (e) => {
+          row.name = e.target.value;
+          markDirty();
+        });
+        amountInput.addEventListener("input", (e) => {
+          row.amount = numericInputElement(e.target);
           updateCalculations(); markDirty();
         });
-        tr.querySelector(".expense-note").addEventListener("input", (e) => {
-          row.note = e.target.value; updateCalculations(); markDirty();
+        noteInput.addEventListener("input", (e) => {
+          row.note = e.target.value;
+          updateCalculations(); markDirty();
         });
+        bindRupiahInput(amountInput);
         tr.querySelector(".remove-btn").addEventListener("click", () => removeRow(type, id));
       });
+    }
+
+    function numericInputElement(el) {
+      const digits = String(el?.value || "").replace(/\D/g, "");
+      const n = Number(digits || 0);
+      return Number.isFinite(n) && n > 0 ? n : 0;
     }
 
     function isQrisExpense(note) {
@@ -698,7 +779,7 @@ const firebaseConfig = {
 
     function getExpenses() {
       return [...operationalRows, ...mealRows]
-        .map(row => ({ amount: Number(row.amount || 0), note: row.note || "", qrisAdjustment: isQrisExpense(row.note) }))
+        .map(row => ({ name: row.name || "", amount: Number(row.amount || 0), note: row.note || "", qrisAdjustment: isQrisExpense(row.note) }))
         .filter(row => row.amount > 0 || row.note.trim());
     }
 
@@ -759,8 +840,8 @@ const firebaseConfig = {
     }
 
     function defaultFormRows() {
-      operationalRows.splice(0, operationalRows.length, { id: `operational-${Date.now()}`, amount: 0, note: "" });
-      mealRows.splice(0, mealRows.length, { id: `meal-${Date.now()}`, amount: 0, note: "" });
+      operationalRows.splice(0, operationalRows.length, { id: `operational-${Date.now()}`, name: "", amount: 0, note: "" });
+      mealRows.splice(0, mealRows.length, { id: `meal-${Date.now()}`, name: "", amount: 0, note: "" });
       renderRows("operational");
       renderRows("meal");
     }
@@ -808,14 +889,14 @@ const firebaseConfig = {
       $("branch").value = branch;
       $("cashierName").value = "";
       $("supervisorName").value = "";
-      $("incomeCash").value = "";
+      setRupiahInputValue("incomeCash", "");
       $("incomeCashNote").value = "";
-      $("incomeQris").value = "";
+      setRupiahInputValue("incomeQris", "");
       $("incomeQrisNote").value = "";
-      $("incomeTransfer").value = "";
+      setRupiahInputValue("incomeTransfer", "");
       $("incomeTransferNote").value = "";
-      $("totalSales").value = "";
-      $("brokenMoney").value = "";
+      setRupiahInputValue("totalSales", "");
+      setRupiahInputValue("brokenMoney", "");
       defaultFormRows();
       clearCurrentRecord();
       updateCalculations();
@@ -825,7 +906,11 @@ const firebaseConfig = {
     }
 
     function serializeRows(rows) {
-      return rows.map(row => ({ amount: Number(row.amount || 0), note: String(row.note || "") }));
+      return rows.map(row => ({
+        name: String(row.name || ""),
+        amount: Number(row.amount || 0),
+        note: String(row.note || "")
+      }));
     }
 
     function collectPayload() {
@@ -901,7 +986,7 @@ const firebaseConfig = {
         updateDeleteVisibility();
         showToast("Closing berhasil disimpan dan tersinkron realtime.", "success");
       } catch (err) {
-        console.error(err);
+        handleFirebaseError(err, "Firestore save");
         showToast(`Gagal menyimpan: ${err.message || "periksa Firebase"}`, "error", 5000);
       } finally {
         setLoading(false);
@@ -922,7 +1007,7 @@ const firebaseConfig = {
         }
         applyRecord({ ...snap.data(), id: snap.id });
       } catch (err) {
-        console.error(err);
+        handleFirebaseError(err, "Firestore read");
         if (!silent) showToast(`Gagal membaca data: ${err.message || "unknown error"}`, "error", 5000);
       }
     }
@@ -935,18 +1020,18 @@ const firebaseConfig = {
       $("branch").value = record.branch || BRANCHES[0];
       $("cashierName").value = record.cashierName || "";
       $("supervisorName").value = record.supervisorName || "";
-      $("incomeCash").value = record.income?.cash || "";
+      setRupiahInputValue("incomeCash", record.income?.cash || "");
       $("incomeCashNote").value = record.income?.cashNote || "";
-      $("incomeQris").value = record.income?.qris || "";
+      setRupiahInputValue("incomeQris", record.income?.qris || "");
       $("incomeQrisNote").value = record.income?.qrisNote || "";
-      $("incomeTransfer").value = record.income?.transfer || "";
+      setRupiahInputValue("incomeTransfer", record.income?.transfer || "");
       $("incomeTransferNote").value = record.income?.transferNote || "";
-      $("totalSales").value = record.totals?.totalSales || "";
-      $("brokenMoney").value = record.totals?.brokenMoney || "";
-      operationalRows.splice(0, operationalRows.length, ...(record.operationalExpenses || []).map((r, i) => ({ id:`op-${Date.now()}-${i}`, amount:Number(r.amount || 0), note:r.note || "" })));
-      mealRows.splice(0, mealRows.length, ...(record.mealExpenses || []).map((r, i) => ({ id:`meal-${Date.now()}-${i}`, amount:Number(r.amount || 0), note:r.note || "" })));
-      if (!operationalRows.length) operationalRows.push({ id:`op-${Date.now()}`, amount:0, note:"" });
-      if (!mealRows.length) mealRows.push({ id:`meal-${Date.now()}`, amount:0, note:"" });
+      setRupiahInputValue("totalSales", record.totals?.totalSales || "");
+      setRupiahInputValue("brokenMoney", record.totals?.brokenMoney || "");
+      operationalRows.splice(0, operationalRows.length, ...(record.operationalExpenses || []).map((r, i) => ({ id:`op-${Date.now()}-${i}`, name:r.name || "", amount:Number(r.amount || 0), note:r.note || "" })));
+      mealRows.splice(0, mealRows.length, ...(record.mealExpenses || []).map((r, i) => ({ id:`meal-${Date.now()}-${i}`, name:r.name || "", amount:Number(r.amount || 0), note:r.note || "" })));
+      if (!operationalRows.length) operationalRows.push({ id:`op-${Date.now()}`, name:"", amount:0, note:"" });
+      if (!mealRows.length) mealRows.push({ id:`meal-${Date.now()}`, name:"", amount:0, note:"" });
       renderRows("operational");
       renderRows("meal");
       updateCalculations();
@@ -986,8 +1071,7 @@ const firebaseConfig = {
           showToast("Ada perubahan dari perangkat lain. Pilih data dari histori untuk memuat versi terbaru.", "warn", 5000);
         }
       }, (err) => {
-        console.error(err);
-        setStatus("Koneksi bermasalah", "error");
+        handleFirebaseError(err, "Firestore current record");
       });
     }
 
@@ -1009,11 +1093,14 @@ const firebaseConfig = {
         });
         records.sort((a,b) => String(b.dateKey).localeCompare(String(a.dateKey)));
         renderHistory(records);
-        setStatus(snapshot.metadata.fromCache ? "Mode cache/offline" : "Realtime tersambung", snapshot.metadata.fromCache ? "warn" : "ok");
+        if (snapshot.metadata.fromCache) {
+          setStatus(navigator.onLine ? "Firebase aktif • cache lokal" : "Offline • cache lokal", navigator.onLine ? "ok" : "warn");
+        } else {
+          setStatus("Realtime tersambung", "ok");
+        }
       }, (err) => {
-        console.error(err);
         $("historyList").innerHTML = `<div class="empty">Gagal memuat histori: ${escapeHtml(err.message || "unknown error")}</div>`;
-        setStatus("Koneksi bermasalah", "error");
+        handleFirebaseError(err, "Firestore history");
       });
     }
 
@@ -1085,12 +1172,12 @@ const firebaseConfig = {
           ["Total Uang Pecah", totals.brokenMoney || 0]
         ],
         details: [
-          ["Jenis", "Kategori", "Nominal", "Keterangan"],
-          ["Pemasukan", "Cash", income.cash || 0, income.cashNote || ""],
-          ["Pemasukan", "QRIS", income.qris || 0, income.qrisNote || ""],
-          ["Pemasukan", "Transfer", income.transfer || 0, income.transferNote || ""],
-          ...operational.map(r => ["Pengeluaran", "Operasional", Number(r.amount || 0), r.note || ""]),
-          ...meals.map(r => ["Pengeluaran", "Makan/Minum", Number(r.amount || 0), r.note || ""])
+          ["Jenis", "Kategori", "Nama", "Nominal", "Keterangan"],
+          ["Pemasukan", "Cash", "", income.cash || 0, income.cashNote || ""],
+          ["Pemasukan", "QRIS", "", income.qris || 0, income.qrisNote || ""],
+          ["Pemasukan", "Transfer", "", income.transfer || 0, income.transferNote || ""],
+          ...operational.map(r => ["Pengeluaran", "Operasional", r.name || "", Number(r.amount || 0), r.note || ""]),
+          ...meals.map(r => ["Pengeluaran", "Makan/Minum", r.name || "", Number(r.amount || 0), r.note || ""])
         ]
       };
     }
@@ -1100,11 +1187,19 @@ const firebaseConfig = {
       if (!record?.dateKey || !record?.branch) { showToast("Data closing belum siap untuk diekspor.", "warn"); return; }
       if (!window.XLSX) { showToast("Library Excel belum termuat. Coba refresh halaman.", "error"); return; }
       const rows = buildExportRows(record);
+      const excelSummary = rows.summary.map(row => {
+        if (row.length >= 2 && typeof row[1] === "number") return [row[0], money(row[1]), ...row.slice(2)];
+        return row;
+      });
+      const excelDetails = rows.details.map((row, index) => {
+        if (index === 0) return row;
+        return [row[0], row[1], row[2], money(row[3]), row[4]];
+      });
       const wb = XLSX.utils.book_new();
-      const ws1 = XLSX.utils.aoa_to_sheet(rows.summary);
-      const ws2 = XLSX.utils.aoa_to_sheet(rows.details);
+      const ws1 = XLSX.utils.aoa_to_sheet(excelSummary);
+      const ws2 = XLSX.utils.aoa_to_sheet(excelDetails);
       ws1["!cols"] = [{wch:34}, {wch:30}, {wch:18}, {wch:55}];
-      ws2["!cols"] = [{wch:16}, {wch:24}, {wch:18}, {wch:65}];
+      ws2["!cols"] = [{wch:16}, {wch:24}, {wch:28}, {wch:18}, {wch:65}];
       XLSX.utils.book_append_sheet(wb, ws1, "Closing");
       XLSX.utils.book_append_sheet(wb, ws2, "Detail");
       XLSX.writeFile(wb, `${formatExportBase(record)}.xlsx`, { compression: true });
@@ -1139,7 +1234,7 @@ const firebaseConfig = {
       });
 
       const y = (docPdf.lastAutoTable?.finalY || 70) + 8;
-      const detailRows = rows.details.slice(1).map(r => [r[0], r[1], money(r[2]), r[3]]);
+      const detailRows = rows.details.slice(1).map(r => [r[0], r[1], r[2], money(r[3]), r[4]]);
       docPdf.autoTable({
         startY: y,
         head: [rows.details[0]],
@@ -1147,7 +1242,7 @@ const firebaseConfig = {
         theme: "striped",
         styles: { fontSize: 7.5, cellPadding: 2 },
         headStyles: { fontStyle: "bold" },
-        columnStyles: { 0:{cellWidth:24}, 1:{cellWidth:33}, 2:{cellWidth:34,halign:"right"}, 3:{cellWidth:89} },
+        columnStyles: { 0:{cellWidth:23}, 1:{cellWidth:29}, 2:{cellWidth:32}, 3:{cellWidth:31,halign:"right"}, 4:{cellWidth:64} },
         didDrawPage: ({ pageNumber }) => {
           docPdf.setFontSize(7); docPdf.setTextColor(100);
           docPdf.text(`Closing Kasir • ${record.branch} • Halaman ${pageNumber}`, 14, 289);
@@ -1168,7 +1263,7 @@ const firebaseConfig = {
         resetForm(localDateKey(), $("branch").value);
         showToast("Closing berhasil dihapus.", "success");
       } catch (err) {
-        console.error(err);
+        handleFirebaseError(err, "Firestore delete");
         showToast(`Gagal menghapus: ${err.message || "unknown error"}`, "error", 5000);
       } finally {
         setLoading(false);
@@ -1188,22 +1283,25 @@ const firebaseConfig = {
         onAuthStateChanged(auth, (user) => {
           authUser = user || null;
           if (authUser) {
-            setStatus("Realtime tersambung", "ok");
+            setStatus(navigator.onLine ? "Firebase aktif • memuat data…" : "Offline • cache lokal", navigator.onLine ? "warn" : "warn");
             subscribeHistory();
             subscribeCurrentRecord();
           }
         });
       } catch (err) {
-        console.error(err);
-        setStatus("Firebase gagal tersambung", "error");
-        showToast(`Firebase Auth gagal: ${err.message || "aktifkan Anonymous Authentication"}`, "error", 6000);
+        handleFirebaseError(err, "Firebase Auth");
+        showToast(`Firebase Auth gagal: ${err.message || "Periksa Anonymous Authentication"}`, "error", 6000);
       }
     }
 
     function bindEvents() {
       ["incomeCash","incomeQris","incomeTransfer","totalSales","brokenMoney"].forEach(id => {
-        $(id).addEventListener("input", () => { updateCalculations(); markDirty(); });
+        $(id).addEventListener("input", () => {
+          updateCalculations();
+          markDirty();
+        });
       });
+      bindAllRupiahInputs();
       ["incomeCashNote","incomeQrisNote","incomeTransferNote","cashierName","supervisorName"].forEach(id => {
         $(id).addEventListener("input", markDirty);
       });
@@ -1239,8 +1337,14 @@ const firebaseConfig = {
         subscribeCurrentRecord();
         window.scrollTo({ top: 0, behavior: "smooth" });
       });
-      window.addEventListener("online", () => setStatus("Koneksi internet kembali", "ok"));
-      window.addEventListener("offline", () => setStatus("Offline • menunggu sinkronisasi", "warn"));
+      window.addEventListener("online", () => {
+        setStatus("Internet kembali • mengecek Firebase…", "warn");
+        if (authUser) {
+          subscribeHistory();
+          subscribeCurrentRecord();
+        }
+      });
+      window.addEventListener("offline", () => setStatus("Offline • cache lokal tetap tersedia", "warn"));
     }
 
     // Tambahkan opsi hapus yang tidak mengganggu layout utama melalui tombol kecil di header.
@@ -1266,6 +1370,7 @@ const firebaseConfig = {
     $("historyMonth").value = currentMonthKey();
     resetForm(localDateKey(), $("branch").value || BRANCHES[0]);
     bindEvents();
+    bindAllRupiahInputs();
     updateCalculations();
     setupFirebase();
   </script>
