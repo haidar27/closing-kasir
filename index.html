@@ -616,6 +616,9 @@ const firebaseConfig = {
       pendingBranch = branch;
       $("branchCodeBranch").textContent = branch;
       $("branchCodeInput").value = "";
+      $("branchCodeInput").disabled = false;
+      $("branchCodeVerify").disabled = false;
+      $("branchCodeCancel").disabled = false;
       $("branchCodeError").textContent = "";
       $("branchCodeModal").classList.add("show");
       $("branchCodeModal").setAttribute("aria-hidden", "false");
@@ -971,13 +974,15 @@ const firebaseConfig = {
     function populateBranches() {
       const main = $("branch");
       const history = $("historyBranch");
-      main.innerHTML = BRANCHES.map((branch, i) => `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`).join("");
-      history.innerHTML = BRANCHES.map((branch, i) => `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`).join("");
+      main.innerHTML = `<option value="" selected disabled>Pilih Cabang</option>` +
+        BRANCHES.map(branch => `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`).join("");
+      history.innerHTML = BRANCHES.map(branch => `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`).join("");
+
       const lastBranch = localStorage.getItem("closingKasirBranch") || BRANCHES[0];
       if (BRANCHES.includes(lastBranch)) {
-        main.value = lastBranch;
         history.value = lastBranch;
       }
+      main.value = "";
     }
 
     function defaultFormRows() {
@@ -989,10 +994,14 @@ const firebaseConfig = {
 
     function setFormEnabled(enabled) {
       document.querySelectorAll("input, select, textarea, button").forEach(el => {
-        if (["exportExcelBtn", "exportPdfBtn", "newClosingBtn", "historyBranch", "historyMonth", "historyDate"].includes(el.id)) return;
+        if ([
+          "exportExcelBtn", "exportPdfBtn", "newClosingBtn",
+          "historyBranch", "historyMonth", "historyDate",
+          "branch", "branchCodeInput", "branchCodeVerify", "branchCodeCancel"
+        ].includes(el.id)) return;
         el.disabled = !enabled;
       });
-      $("closingDate").disabled = false;
+      $("closingDate").disabled = !enabled;
       $("branch").disabled = false;
       $("saveBtn").disabled = !enabled;
     }
@@ -1548,17 +1557,29 @@ const firebaseConfig = {
       });
       $("branch").addEventListener("change", async () => {
         const selectedBranch = $("branch").value;
-        const previousBranch = authorizedBranch || localStorage.getItem("closingKasirBranch") || BRANCHES[0];
+        const previousBranch = authorizedBranch || "";
+
+        if (!selectedBranch) {
+          branchAuthorized = false;
+          setFormEnabled(false);
+          return;
+        }
+
         if (selectedBranch === previousBranch && branchAuthorized) return;
+
         const ok = await requireBranchAccess(selectedBranch);
         if (!ok) {
           isHydrating = true;
           $("branch").value = previousBranch;
           isHydrating = false;
-          branchAuthorized = !!authorizedBranch && authorizedBranch === previousBranch;
+          branchAuthorized = !!previousBranch && authorizedBranch === previousBranch;
+          if (!previousBranch) {
+            authorizedBranch = "";
+          }
           setFormEnabled(branchAuthorized);
           return;
         }
+
         localStorage.setItem("closingKasirBranch", selectedBranch);
         if (selectedBranch !== previousBranch) {
           if (unsubscribeCurrent) { unsubscribeCurrent(); unsubscribeCurrent = null; }
@@ -1592,11 +1613,17 @@ const firebaseConfig = {
         resetForm(localDateKey(), $("branch").value);
       });
       $("newClosingBtn").addEventListener("click", async () => {
+        if (!$("branch").value || !branchAuthorized) {
+          showToast("Pilih cabang terlebih dahulu untuk memulai Closing Baru.", "warn");
+          return;
+        }
         if (!confirmStartNewClosing()) return;
-        const branch = $("branch").value || BRANCHES[0];
-        if (!(await requireBranchAccess(branch))) return;
+        const branch = $("branch").value;
         if (unsubscribeCurrent) { unsubscribeCurrent(); unsubscribeCurrent = null; }
         resetForm(localDateKey(), branch);
+        branchAuthorized = true;
+        authorizedBranch = branch;
+        setFormEnabled(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
         showToast("Closing Baru siap diinput.", "success", 2200);
       });
@@ -1633,13 +1660,13 @@ const firebaseConfig = {
     $("historyMonth").value = currentMonthKey();
     $("historyDate").value = "";
     $("historyDate").max = localDateKey();
-    resetForm(localDateKey(), $("branch").value || BRANCHES[0]);
+    resetForm(localDateKey(), "");
     bindEvents();
     bindAllRupiahInputs();
     updateCalculations();
     setFormEnabled(false);
+    $("branch").disabled = false;
     setupFirebase();
-    requireBranchAccess($("branch").value || BRANCHES[0]).catch(() => setFormEnabled(false));
   </script>
 </body>
 </html>
