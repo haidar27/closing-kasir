@@ -419,17 +419,17 @@
                 <div class="field">
                   <label for="salesRemainder">Tambahan Uang Pecah dari Omzet</label>
                   <input id="salesRemainder" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
-                  <small>Nominal omzet yang sengaja dipisahkan untuk menjadi uang pecah. Nominal ini tetap bagian dari omzet dan <strong>ikut diperhitungkan dalam selisih</strong>.</small>
+                  <small>Masukkan sisa omzet yang sengaja ditahan sebagai uang pecah. Nominal ini <strong>bukan selisih</strong> karena tetap merupakan bagian dari omzet.</small>
                 </div>
                 <div class="field span-2">
-                  <label>Perhitungan Owner</label>
-                  <input id="differenceFormula" type="text" value="Selisih = Total Cash + QRIS + Transfer + Tambahan Uang Pecah − Total Penjualan / Omzet" disabled />
+                  <label>Perhitungan Rekonsiliasi</label>
+                  <input id="differenceFormula" type="text" value="Selisih = (Cash + QRIS + Transfer + Tambahan Uang Pecah dari Omzet) − Total Omzet" disabled />
                 </div>
               </div>
 
               <div class="hint" style="margin-top:16px;">
                 <div>💡</div>
-                <div><strong>Logika laporan:</strong> pengeluaran hanya menjadi informasi dan <strong>tidak mengubah angka pemasukan</strong>. Tambahan uang pecah berasal dari omzet, sehingga nominal tersebut <strong>ditambahkan kembali dalam rekonsiliasi omzet</strong>. Rumus selisih: <strong>(Cash + QRIS + Transfer + Tambahan Uang Pecah dari Omzet) − Total Omzet</strong>. Tanda <strong>+</strong> berarti ada kelebihan, tanda <strong>-</strong> berarti ada kekurangan, dan <strong>Rp 0</strong> berarti sesuai.</div>
+                <div><strong>Logika laporan:</strong> pengeluaran hanya menjadi informasi dan <strong>tidak mengubah angka pemasukan</strong>. Bila omzet Rp3.330.000 disetor Rp3.300.000 dan Rp30.000 ditahan sebagai uang pecah, input <strong>Tambahan Uang Pecah dari Omzet = Rp30.000</strong>. Maka Rp3.300.000 + Rp30.000 = Rp3.330.000 dan <strong>selisih tetap Rp0</strong>. Rumus selisih: <strong>(Cash + QRIS + Transfer + Tambahan Uang Pecah dari Omzet) − Total Omzet</strong>.</div>
               </div>
 
               <div class="money-summary" style="margin-top:16px;">
@@ -438,7 +438,7 @@
                 <div class="stat primary"><div class="label">Total Penjualan / Omzet</div><div id="finalSalesDisplay" class="value">Rp 0</div></div>
                 <div class="stat warning"><div class="label">Tambahan Uang Pecah dari Omzet</div><div id="salesRemainderDisplay" class="value">Rp 0</div></div>
                 <div class="stat"><div class="label">Uang Pecah Akhir</div><div id="finalBrokenMoneyDisplay" class="value">Rp 0</div></div>
-                <div class="stat success"><div class="label">Uang Diambil Owner</div><div id="ownerWithdrawalDisplay" class="value">Rp 0</div></div>
+                <div class="stat success"><div class="label">Setoran Owner</div><div id="ownerWithdrawalDisplay" class="value">Rp 0</div></div>
                 <div id="differenceStat" class="stat danger">
                   <div class="label">Total Selisih</div>
                   <div id="differenceDisplay" class="value">Rp 0</div>
@@ -826,16 +826,15 @@ const firebaseConfig = {
       const totalSales = numericInput("totalSales");
       const brokenMoney = numericInput("brokenMoney");
 
-      // Tambahan uang pecah berasal dari omzet yang sengaja dipisahkan.
-      // Karena masih merupakan bagian dari omzet, nominal ini ditambahkan
-      // ke sisi aktual ketika melakukan rekonsiliasi.
+      // Uang pecah dari omzet adalah bagian dari omzet yang sengaja ditahan
+      // dan tidak disetor kepada owner. Karena itu nominal ini bukan selisih.
       const salesRemainder = Math.max(0, numericInput("salesRemainder"));
       const ownerWithdrawal = Math.max(0, totalSales - salesRemainder);
       const finalBrokenMoney = brokenMoney + salesRemainder;
 
-      // Rekonsiliasi omzet:
-      // Actual = Cash + QRIS + Transfer + tambahan uang pecah dari omzet
-      // Expected = total omzet
+      // Rekonsiliasi transparan:
+      // Total terhitung = Cash + QRIS + Transfer + tambahan uang pecah dari omzet.
+      // Total terhitung dibandingkan langsung dengan total omzet.
       // Pengeluaran TIDAK ikut masuk rumus karena hanya menjadi informasi.
       const expectedOwnerSettlement = totalSales;
       const actualOwnerSettlement = totalIncome + salesRemainder;
@@ -954,6 +953,37 @@ const firebaseConfig = {
       if (isHydrating) return;
       formDirty = true;
       $("recordMode").textContent = activeDocId ? "Perubahan" : "Baru";
+    }
+
+    function isFormFilled() {
+      if (activeDocId || currentRecord) return true;
+      if (formDirty) return true;
+
+      const textFields = [
+        "cashierName", "supervisorName",
+        "incomeCashNote", "incomeQrisNote", "incomeTransferNote"
+      ];
+      if (textFields.some(id => String($(id)?.value || "").trim())) return true;
+
+      const moneyFields = [
+        "incomeCash", "incomeQris", "incomeTransfer",
+        "totalSales", "brokenMoney", "salesRemainder"
+      ];
+      if (moneyFields.some(id => numericInput(id) > 0)) return true;
+
+      if (operationalRows.some(row => Number(row.amount || 0) > 0 || String(row.name || "").trim() || String(row.note || "").trim())) return true;
+      if (mealRows.some(row => Number(row.amount || 0) > 0 || String(row.name || "").trim() || String(row.note || "").trim())) return true;
+
+      return false;
+    }
+
+    function confirmStartNewClosing() {
+      if (!isFormFilled()) return true;
+      return confirm(
+        "Data closing saat ini sudah terisi atau tersimpan. Pastikan data sudah diverifikasi terlebih dahulu.\n\n" +
+        "Form akan dikosongkan dan dipersiapkan untuk input Closing Baru. Data yang belum disimpan akan hilang dari form ini.\n\n" +
+        "Lanjutkan membuat Closing Baru?"
+      );
     }
 
     function clearCurrentRecord() {
@@ -1075,6 +1105,7 @@ const firebaseConfig = {
         $("exportExcelBtn").disabled = false;
         $("exportPdfBtn").disabled = false;
         localStorage.setItem("closingKasirBranch", payload.branch);
+        subscribeCurrentRecord();
         updateDeleteVisibility();
         showToast("Closing berhasil disimpan dan tersinkron realtime.", "success");
       } catch (err) {
@@ -1172,6 +1203,7 @@ const firebaseConfig = {
       const branch = $("branch").value;
       const dateKey = $("closingDate").value;
       if (!branch || !dateKey || dateKey > localDateKey()) return;
+      if (!activeDocId && !currentRecord) return;
       const ref = doc(db, "closings", documentId(branch, dateKey));
       unsubscribeCurrent = onSnapshot(ref, { includeMetadataChanges: true }, (snap) => {
         if (!snap.exists()) return;
@@ -1288,11 +1320,11 @@ const firebaseConfig = {
           ["Uang Pecah Awal", totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0],
           ["Tambahan Uang Pecah dari Omzet", totals.salesRemainder || 0],
           ["Uang Pecah Akhir", totals.finalBrokenMoney ?? totals.brokenMoney ?? 0],
-          ["Uang Diambil Owner", (totals.ownerWithdrawal ?? totals.totalSales ?? 0)],
-          ["Setoran Owner Seharusnya", totals.expectedOwnerSettlement ?? 0],
-          ["Setoran Owner Aktual", totals.actualOwnerSettlement ?? 0],
-          ["Total Selisih", signedMoney(totals.difference || 0)],
-          ["Rumus Selisih", "Cash + QRIS + Transfer + Tambahan Uang Pecah − Total Omzet"]
+          ["Setoran Owner", (totals.ownerWithdrawal ?? totals.totalSales ?? 0)],
+          ["Total Omzet / Setoran Seharusnya", totals.expectedOwnerSettlement ?? 0],
+          ["Total Terhitung untuk Rekonsiliasi", totals.actualOwnerSettlement ?? 0],
+          ["Total Selisih Rekonsiliasi", signedMoney(totals.difference || 0)],
+          ["Rumus Selisih", "(Cash + QRIS + Transfer + Tambahan Uang Pecah dari Omzet) − Total Omzet"]
         ],
         details: [
           ["Jenis", "Kategori", "Nama", "Nominal", "Keterangan"],
@@ -1451,14 +1483,15 @@ const firebaseConfig = {
       $("exportPdfBtn").addEventListener("click", exportPdf);
       $("resetBtn").addEventListener("click", () => {
         if (formDirty && !confirm("Perubahan yang belum disimpan akan hilang. Lanjutkan?")) return;
+        if (unsubscribeCurrent) { unsubscribeCurrent(); unsubscribeCurrent = null; }
         resetForm(localDateKey(), $("branch").value);
-        subscribeCurrentRecord();
       });
       $("newClosingBtn").addEventListener("click", () => {
-        if (formDirty && !confirm("Perubahan yang belum disimpan akan hilang. Buat closing baru?")) return;
+        if (!confirmStartNewClosing()) return;
+        if (unsubscribeCurrent) { unsubscribeCurrent(); unsubscribeCurrent = null; }
         resetForm(localDateKey(), $("branch").value);
-        subscribeCurrentRecord();
         window.scrollTo({ top: 0, behavior: "smooth" });
+        showToast("Closing Baru siap diinput.", "success", 2200);
       });
       window.addEventListener("online", () => {
         setStatus("Internet kembali • mengecek Firebase…", "warn");
