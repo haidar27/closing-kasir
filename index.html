@@ -14,18 +14,18 @@
 
   <style>
     :root {
-      --bg: #f7f6fb;
+      --bg: #fbf7f7;
       --surface: #ffffff;
-      --surface-soft: #fbfafc;
-      --line: #e8e3ef;
-      --text: #36343d;
-      --muted: #777381;
-      --primary: #8879ad;
-      --primary-dark: #76669d;
-      --success: #82aa91;
-      --warning: #cba96a;
-      --danger: #c88484;
-      --shadow: 0 12px 30px rgba(77, 67, 98, .08);
+      --surface-soft: #fffafa;
+      --line: #ead9da;
+      --text: #3f3031;
+      --muted: #79686a;
+      --primary: #a83f45;
+      --primary-dark: #8f3339;
+      --success: #4f8a67;
+      --warning: #a56a2a;
+      --danger: #b33f46;
+      --shadow: 0 12px 30px rgba(105, 49, 53, .09);
       --radius: 18px;
     }
 
@@ -45,7 +45,7 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(102, 91, 126, .96);
+      background: rgba(122, 35, 42, .96);
       backdrop-filter: blur(14px);
       border-bottom: 1px solid rgba(255,255,255,.08);
       color: #fff;
@@ -62,9 +62,9 @@
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .brand-mark {
       width: 42px; height: 42px; border-radius: 12px;
-      background: linear-gradient(135deg, #b9abd5, #8879ad);
+      background: linear-gradient(135deg, #c95a61, #a83f45);
       display: grid; place-items: center; font-weight: 900;
-      box-shadow: 0 8px 20px rgba(136,121,173,.28);
+      box-shadow: 0 8px 20px rgba(168,63,69,.26);
       flex: 0 0 auto;
     }
     .brand h1 { margin: 0; font-size: 17px; letter-spacing: .2px; }
@@ -87,7 +87,7 @@
       margin-bottom: 18px;
     }
     .hero-card {
-      background: linear-gradient(135deg, #6d6285, #9184aa);
+      background: linear-gradient(135deg, #7f252c, #b34c53);
       color: #fff; border-radius: 24px; padding: 26px;
       box-shadow: var(--shadow); overflow: hidden; position: relative;
     }
@@ -125,7 +125,7 @@
       width:100%; border:1px solid #cbd5e1; border-radius:12px; background:#fff;
       color:var(--text); outline:none; transition:.16s ease; padding:11px 12px;
     }
-    input:focus, select:focus, textarea:focus { border-color: #b7a9d0; box-shadow: 0 0 0 4px rgba(136,121,173,.12); }
+    input:focus, select:focus, textarea:focus { border-color: #d77b81; box-shadow: 0 0 0 4px rgba(179,63,70,.12); }
     input[disabled], select[disabled] { background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
     .money { text-align:right; font-variant-numeric: tabular-nums; }
     .money-input { font-variant-numeric: tabular-nums; }
@@ -141,15 +141,15 @@
     }
     .stat .label { color:var(--muted); font-size:11px; margin-bottom:6px; }
     .stat .value { font-size:19px; font-weight:850; letter-spacing:-.3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .stat.primary { background:#f1edf8; border-color:#ddd4ed; }
-    .stat.success { background:#edf6f0; border-color:#cee3d5; }
-    .stat.warning { background:#fbf5e8; border-color:#ead7ab; }
-    .stat.danger { background:#faf0f0; border-color:#e7c4c4; }
+    .stat.primary { background:#fff0f1; border-color:#f0c9cc; }
+    .stat.success { background:#edf7f0; border-color:#c9e1d2; }
+    .stat.warning { background:#fff6ea; border-color:#efd7b8; }
+    .stat.danger { background:#fff0f1; border-color:#efc5c8; }
 
     .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:14px; }
     table { width:100%; border-collapse:collapse; min-width:760px; }
     th, td { padding:10px 11px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
-    th { background:#faf9fc; color:#475569; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+    th { background:#fff7f7; color:#5f4d4f; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
     td { font-size:12px; }
     tr:last-child td { border-bottom:0; }
     .table-input { padding:9px 10px; border-radius:10px; }
@@ -163,10 +163,10 @@
       border:1px dashed #94a3b8; background:#fff; color:#334155; padding:9px 12px; border-radius:11px;
       font-weight:700; font-size:12px;
     }
-    .add-btn:hover { border-color:#b7a9d0; color:var(--primary); background:#f3eef9; }
+    .add-btn:hover { border-color:#d77b81; color:var(--primary); background:#fff0f1; }
 
     .hint {
-      display:flex; gap:10px; align-items:flex-start; padding:12px 14px; background:#faf9fc; border:1px solid var(--line); border-radius:12px;
+      display:flex; gap:10px; align-items:flex-start; padding:12px 14px; background:#fff8f8; border:1px solid var(--line); border-radius:12px;
       margin-top:12px; color:#475569; font-size:11px; line-height:1.55;
     }
     .hint strong { color:#0f172a; }
@@ -182,7 +182,7 @@
     .btn-secondary { background:#fff; color:#334155; border-color:#cbd5e1; }
     .btn-secondary:hover:not(:disabled) { background:#faf9fc; }
     .btn-danger { background:#fff; color:var(--danger); border-color:#fecaca; }
-    .btn-dark { background:#716582; color:#fff; }
+    .btn-dark { background:#6f252b; color:#fff; }
 
     .history-tools { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .history-list { display:grid; gap:10px; max-height: 680px; overflow:auto; padding-right:3px; }
@@ -192,7 +192,7 @@
       transition:.15s ease;
     }
     .history-item:hover { border-color:#cbbfe0; box-shadow:0 6px 16px rgba(15,23,42,.06); }
-    .history-item.active { border-color:#b7a9d0; background:#f3eef9; }
+    .history-item.active { border-color:#d77b81; background:#fff0f1; }
     .history-date { font-weight:850; font-size:13px; }
     .history-meta { color:var(--muted); font-size:11px; margin-top:3px; }
     .history-amount { text-align:right; font-weight:850; font-size:13px; }
@@ -227,29 +227,29 @@
     }
     .loading-overlay.show { display:grid; }
     .spinner-card { background:#fff; border-radius:16px; padding:18px 20px; box-shadow:var(--shadow); display:flex; align-items:center; gap:12px; font-size:12px; font-weight:750; }
-    .spinner { width:18px; height:18px; border:3px solid #e3dcef; border-top-color:#8879ad; border-radius:50%; animation:spin .7s linear infinite; }
+    .spinner { width:18px; height:18px; border:3px solid #e3dcef; border-top-color:#a83f45; border-radius:50%; animation:spin .7s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
 
 
     .branch-modal {
       position:fixed; inset:0; z-index:120; display:none; place-items:center;
-      padding:18px; background:rgba(54,52,61,.32); backdrop-filter:blur(5px);
+      padding:18px; background:rgba(74,31,34,.32); backdrop-filter:blur(5px);
     }
     .branch-modal.show { display:grid; }
     .branch-modal-card {
-      width:min(380px,100%); background:#fff; border:1px solid #e6dfef; border-radius:22px;
-      box-shadow:0 24px 60px rgba(77,67,98,.18); padding:24px; text-align:center;
+      width:min(380px,100%); background:#fff; border:1px solid #ead9da; border-radius:22px;
+      box-shadow:0 24px 60px rgba(105,49,53,.18); padding:24px; text-align:center;
     }
     .branch-modal-icon {
       width:48px; height:48px; margin:0 auto 12px; border-radius:15px; display:grid; place-items:center;
-      background:#f1edf8; font-size:22px;
+      background:#fff0f1; font-size:22px;
     }
     .branch-modal-card h3 { margin:0; font-size:18px; color:#36343d; }
-    .branch-modal-branch { margin:6px 0 20px; font-size:14px; font-weight:800; color:#8879ad; }
+    .branch-modal-branch { margin:6px 0 20px; font-size:14px; font-weight:800; color:#a83f45; }
     .branch-modal-card label { display:block; text-align:left; margin-bottom:7px; font-size:12px; font-weight:800; color:#4d4956; }
     .branch-code-input { text-align:center; letter-spacing:8px; font-size:22px; font-weight:800; }
     .branch-code-input::placeholder { color:#c8c1d2; letter-spacing:6px; }
-    .branch-code-error { min-height:18px; margin-top:8px; color:#b06f6f; font-size:11px; font-weight:700; }
+    .branch-code-error { min-height:18px; margin-top:8px; color:#b33f46; font-size:11px; font-weight:700; }
     .branch-modal-actions { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:14px; }
 
     .footer-note { text-align:center; color:var(--muted); font-size:11px; margin-top:18px; }
@@ -421,10 +421,6 @@
                 <div class="field">
                   <label for="salesRemainder">Tambahan Uang Pecah dari Omzet</label>
                   <input id="salesRemainder" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
-                </div>
-                <div class="field span-2">
-                  <label>Perhitungan Rekonsiliasi</label>
-                  <input id="differenceFormula" type="text" value="Selisih = (Cash + QRIS + Transfer + Tambahan Uang Pecah dari Omzet) − Total Omzet" disabled />
                 </div>
               </div>
 
