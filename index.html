@@ -14,18 +14,18 @@
 
   <style>
     :root {
-      --bg: #f5f7fb;
+      --bg: #f7f6fb;
       --surface: #ffffff;
-      --surface-soft: #f8fafc;
-      --line: #e2e8f0;
-      --text: #0f172a;
-      --muted: #64748b;
-      --primary: #2563eb;
-      --primary-dark: #1d4ed8;
-      --success: #16a34a;
-      --warning: #d97706;
-      --danger: #dc2626;
-      --shadow: 0 12px 30px rgba(15, 23, 42, .08);
+      --surface-soft: #fbfafc;
+      --line: #e8e3ef;
+      --text: #36343d;
+      --muted: #777381;
+      --primary: #8879ad;
+      --primary-dark: #76669d;
+      --success: #82aa91;
+      --warning: #cba96a;
+      --danger: #c88484;
+      --shadow: 0 12px 30px rgba(77, 67, 98, .08);
       --radius: 18px;
     }
 
@@ -45,7 +45,7 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(15, 23, 42, .96);
+      background: rgba(102, 91, 126, .96);
       backdrop-filter: blur(14px);
       border-bottom: 1px solid rgba(255,255,255,.08);
       color: #fff;
@@ -62,9 +62,9 @@
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .brand-mark {
       width: 42px; height: 42px; border-radius: 12px;
-      background: linear-gradient(135deg, #60a5fa, #2563eb);
+      background: linear-gradient(135deg, #b9abd5, #8879ad);
       display: grid; place-items: center; font-weight: 900;
-      box-shadow: 0 8px 20px rgba(37,99,235,.35);
+      box-shadow: 0 8px 20px rgba(136,121,173,.28);
       flex: 0 0 auto;
     }
     .brand h1 { margin: 0; font-size: 17px; letter-spacing: .2px; }
@@ -87,7 +87,7 @@
       margin-bottom: 18px;
     }
     .hero-card {
-      background: linear-gradient(135deg, #0f172a, #1e293b);
+      background: linear-gradient(135deg, #6d6285, #9184aa);
       color: #fff; border-radius: 24px; padding: 26px;
       box-shadow: var(--shadow); overflow: hidden; position: relative;
     }
@@ -125,7 +125,7 @@
       width:100%; border:1px solid #cbd5e1; border-radius:12px; background:#fff;
       color:var(--text); outline:none; transition:.16s ease; padding:11px 12px;
     }
-    input:focus, select:focus, textarea:focus { border-color: #60a5fa; box-shadow: 0 0 0 4px rgba(37,99,235,.10); }
+    input:focus, select:focus, textarea:focus { border-color: #b7a9d0; box-shadow: 0 0 0 4px rgba(136,121,173,.12); }
     input[disabled], select[disabled] { background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
     .money { text-align:right; font-variant-numeric: tabular-nums; }
     .money-input { font-variant-numeric: tabular-nums; }
@@ -141,15 +141,15 @@
     }
     .stat .label { color:var(--muted); font-size:11px; margin-bottom:6px; }
     .stat .value { font-size:19px; font-weight:850; letter-spacing:-.3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .stat.primary { background:#eff6ff; border-color:#bfdbfe; }
-    .stat.success { background:#f0fdf4; border-color:#bbf7d0; }
-    .stat.warning { background:#fffbeb; border-color:#fde68a; }
-    .stat.danger { background:#fef2f2; border-color:#fecaca; }
+    .stat.primary { background:#f1edf8; border-color:#ddd4ed; }
+    .stat.success { background:#edf6f0; border-color:#cee3d5; }
+    .stat.warning { background:#fbf5e8; border-color:#ead7ab; }
+    .stat.danger { background:#faf0f0; border-color:#e7c4c4; }
 
     .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:14px; }
     table { width:100%; border-collapse:collapse; min-width:760px; }
     th, td { padding:10px 11px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
-    th { background:#f8fafc; color:#475569; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+    th { background:#faf9fc; color:#475569; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
     td { font-size:12px; }
     tr:last-child td { border-bottom:0; }
     .table-input { padding:9px 10px; border-radius:10px; }
@@ -163,10 +163,10 @@
       border:1px dashed #94a3b8; background:#fff; color:#334155; padding:9px 12px; border-radius:11px;
       font-weight:700; font-size:12px;
     }
-    .add-btn:hover { border-color:#60a5fa; color:var(--primary); background:#eff6ff; }
+    .add-btn:hover { border-color:#b7a9d0; color:var(--primary); background:#f3eef9; }
 
     .hint {
-      display:flex; gap:10px; align-items:flex-start; padding:12px 14px; background:#f8fafc; border:1px solid var(--line); border-radius:12px;
+      display:flex; gap:10px; align-items:flex-start; padding:12px 14px; background:#faf9fc; border:1px solid var(--line); border-radius:12px;
       margin-top:12px; color:#475569; font-size:11px; line-height:1.55;
     }
     .hint strong { color:#0f172a; }
@@ -180,9 +180,9 @@
     .btn-primary { background:var(--primary); color:#fff; }
     .btn-primary:hover:not(:disabled) { background:var(--primary-dark); transform:translateY(-1px); }
     .btn-secondary { background:#fff; color:#334155; border-color:#cbd5e1; }
-    .btn-secondary:hover:not(:disabled) { background:#f8fafc; }
+    .btn-secondary:hover:not(:disabled) { background:#faf9fc; }
     .btn-danger { background:#fff; color:var(--danger); border-color:#fecaca; }
-    .btn-dark { background:#0f172a; color:#fff; }
+    .btn-dark { background:#716582; color:#fff; }
 
     .history-tools { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .history-list { display:grid; gap:10px; max-height: 680px; overflow:auto; padding-right:3px; }
@@ -191,8 +191,8 @@
       display:grid; grid-template-columns: 1fr auto; gap:10px; cursor:pointer;
       transition:.15s ease;
     }
-    .history-item:hover { border-color:#93c5fd; box-shadow:0 6px 16px rgba(15,23,42,.06); }
-    .history-item.active { border-color:#60a5fa; background:#eff6ff; }
+    .history-item:hover { border-color:#cbbfe0; box-shadow:0 6px 16px rgba(15,23,42,.06); }
+    .history-item.active { border-color:#b7a9d0; background:#f3eef9; }
     .history-date { font-weight:850; font-size:13px; }
     .history-meta { color:var(--muted); font-size:11px; margin-top:3px; }
     .history-amount { text-align:right; font-weight:850; font-size:13px; }
@@ -217,9 +217,9 @@
       font-size:12px; line-height:1.45;
     }
     .toast.show { transform:translateY(0); opacity:1; }
-    .toast.success { background:#166534; }
-    .toast.error { background:#991b1b; }
-    .toast.warn { background:#92400e; }
+    .toast.success { background:#6d947b; }
+    .toast.error { background:#a66b6b; }
+    .toast.warn { background:#a88755; }
 
     .loading-overlay {
       position:fixed; inset:0; z-index:90; background:rgba(15,23,42,.35); backdrop-filter:blur(3px);
@@ -227,8 +227,30 @@
     }
     .loading-overlay.show { display:grid; }
     .spinner-card { background:#fff; border-radius:16px; padding:18px 20px; box-shadow:var(--shadow); display:flex; align-items:center; gap:12px; font-size:12px; font-weight:750; }
-    .spinner { width:18px; height:18px; border:3px solid #dbeafe; border-top-color:#2563eb; border-radius:50%; animation:spin .7s linear infinite; }
+    .spinner { width:18px; height:18px; border:3px solid #e3dcef; border-top-color:#8879ad; border-radius:50%; animation:spin .7s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
+
+
+    .branch-modal {
+      position:fixed; inset:0; z-index:120; display:none; place-items:center;
+      padding:18px; background:rgba(54,52,61,.32); backdrop-filter:blur(5px);
+    }
+    .branch-modal.show { display:grid; }
+    .branch-modal-card {
+      width:min(380px,100%); background:#fff; border:1px solid #e6dfef; border-radius:22px;
+      box-shadow:0 24px 60px rgba(77,67,98,.18); padding:24px; text-align:center;
+    }
+    .branch-modal-icon {
+      width:48px; height:48px; margin:0 auto 12px; border-radius:15px; display:grid; place-items:center;
+      background:#f1edf8; font-size:22px;
+    }
+    .branch-modal-card h3 { margin:0; font-size:18px; color:#36343d; }
+    .branch-modal-branch { margin:6px 0 20px; font-size:14px; font-weight:800; color:#8879ad; }
+    .branch-modal-card label { display:block; text-align:left; margin-bottom:7px; font-size:12px; font-weight:800; color:#4d4956; }
+    .branch-code-input { text-align:center; letter-spacing:8px; font-size:22px; font-weight:800; }
+    .branch-code-input::placeholder { color:#c8c1d2; letter-spacing:6px; }
+    .branch-code-error { min-height:18px; margin-top:8px; color:#b06f6f; font-size:11px; font-weight:700; }
+    .branch-modal-actions { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:14px; }
 
     .footer-note { text-align:center; color:var(--muted); font-size:11px; margin-top:18px; }
 
@@ -269,7 +291,6 @@
           <div class="brand-mark">CK</div>
           <div>
             <h1>Closing Kasir</h1>
-            <p>Closing harian kasir • realtime Firebase</p>
           </div>
         </div>
         <div class="topbar-actions">
@@ -280,22 +301,15 @@
     </header>
 
     <main class="container">
-      <div id="configBanner" class="config-banner">
-        <strong>Firebase belum dikonfigurasi.</strong><br>
-        Buka file ini, cari <code>firebaseConfig</code>, lalu isi konfigurasi dari Firebase Console. Setelah itu aktifkan <strong>Firestore Database</strong> dan <strong>Anonymous Authentication</strong>.
-      </div>
-
-      <section class="hero">
+<section class="hero">
         <div class="hero-card">
           <h2>Closing Harian Kasir</h2>
-          <p>Masukkan transaksi closing per tanggal dan cabang. Perhitungan pemasukan, pengeluaran, selisih, histori, serta sinkronisasi antar perangkat berjalan otomatis.</p>
         </div>
         <div class="hero-card" style="display:grid;align-content:center;gap:10px;">
           <div class="today-chip">
             <div><div style="font-size:11px;color:#94a3b8;">Hari ini</div><strong id="todayLabel">-</strong></div>
             <div style="font-size:24px;">📅</div>
           </div>
-          <div style="font-size:11px;color:#94a3b8;position:relative;z-index:1;">Tanggal besok dan tanggal setelahnya otomatis terkunci.</div>
         </div>
       </section>
 
@@ -305,7 +319,6 @@
             <div class="card-header">
               <div>
                 <h3>Identitas Closing</h3>
-                <p>Isi identitas kasir, supervisor, cabang, dan tanggal closing.</p>
               </div>
               <span id="recordMode" class="status" style="background:#f1f5f9;color:#334155;">Baru</span>
             </div>
@@ -336,7 +349,6 @@
             <div class="card-header">
               <div>
                 <h3>Pemasukan</h3>
-                <p>Masukkan nominal pemasukan yang benar-benar diterima: Cash, QRIS, dan Transfer.</p>
               </div>
             </div>
             <div class="card-body">
@@ -353,11 +365,6 @@
                 </table>
               </div>
 
-              <div class="hint">
-                <div>ℹ️</div>
-                <div><strong>Aturan:</strong> pengeluaran Operasional dan Makan/Minum hanya dicatat sebagai informasi transaksi. Pengeluaran <strong>tidak menambah Cash, tidak menambah QRIS, dan tidak menambah Total Pemasukan</strong>. User menentukan sendiri Total Cash berdasarkan uang yang benar-benar ada.</div>
-              </div>
-
               <div class="money-summary">
                 <div class="stat"><div class="label">Cash Dasar</div><div id="cashBaseDisplay" class="value">Rp 0</div></div>
                 <div class="stat primary"><div class="label">Total Cash</div><div id="cashAdjustedDisplay" class="value">Rp 0</div></div>
@@ -371,7 +378,6 @@
             <div class="card-header">
               <div>
                 <h3>Pengeluaran Operasional</h3>
-                <p>Tambahkan sebanyak baris yang dibutuhkan.</p>
               </div>
               <button id="addOperationalBtn" class="add-btn" type="button">+ Tambah Pengeluaran</button>
             </div>
@@ -384,7 +390,6 @@
             <div class="card-header">
               <div>
                 <h3>Pengeluaran Makan / Minum</h3>
-                <p>Masukkan nominal dan keterangan per transaksi.</p>
               </div>
               <button id="addMealBtn" class="add-btn" type="button">+ Tambah Pengeluaran</button>
             </div>
@@ -401,7 +406,6 @@
             <div class="card-header">
               <div>
                 <h3>Rekap Akhir</h3>
-                <p>Total penjualan dan uang pecah diinput manual. Selisih dihitung otomatis.</p>
               </div>
             </div>
             <div class="card-body">
@@ -409,27 +413,19 @@
                 <div class="field">
                   <label for="totalSales">Total Penjualan / Omzet</label>
                   <input id="totalSales" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
-                  <small>Omzet tetap dicatat sesuai angka sebenarnya, termasuk nominal yang ditahan menjadi uang pecah.</small>
                 </div>
                 <div class="field">
                   <label for="brokenMoney">Uang Pecah Awal</label>
                   <input id="brokenMoney" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
-                  <small>Saldo uang pecah yang sudah tersedia sebelum tambahan dari omzet hari ini.</small>
                 </div>
                 <div class="field">
                   <label for="salesRemainder">Tambahan Uang Pecah dari Omzet</label>
                   <input id="salesRemainder" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
-                  <small>Masukkan sisa omzet yang sengaja ditahan sebagai uang pecah. Nominal ini <strong>bukan selisih</strong> karena tetap merupakan bagian dari omzet.</small>
                 </div>
                 <div class="field span-2">
                   <label>Perhitungan Rekonsiliasi</label>
                   <input id="differenceFormula" type="text" value="Selisih = (Cash + QRIS + Transfer + Tambahan Uang Pecah dari Omzet) − Total Omzet" disabled />
                 </div>
-              </div>
-
-              <div class="hint" style="margin-top:16px;">
-                <div>💡</div>
-                <div><strong>Logika laporan:</strong> pengeluaran hanya menjadi informasi dan <strong>tidak mengubah angka pemasukan</strong>. Bila omzet Rp3.330.000 disetor Rp3.300.000 dan Rp30.000 ditahan sebagai uang pecah, input <strong>Tambahan Uang Pecah dari Omzet = Rp30.000</strong>. Maka Rp3.300.000 + Rp30.000 = Rp3.330.000 dan <strong>selisih tetap Rp0</strong>. Rumus selisih: <strong>(Cash + QRIS + Transfer + Tambahan Uang Pecah dari Omzet) − Total Omzet</strong>.</div>
               </div>
 
               <div class="money-summary" style="margin-top:16px;">
@@ -442,7 +438,7 @@
                 <div id="differenceStat" class="stat danger">
                   <div class="label">Total Selisih</div>
                   <div id="differenceDisplay" class="value">Rp 0</div>
-                  <small id="differenceStatus" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;">Pas / sesuai omzet</small>
+                   <div id="differenceStatus" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;"></div>
                 </div>
               </div>
 
@@ -461,7 +457,6 @@
             <div class="card-header">
               <div>
                 <h3>History Closing</h3>
-                <p>Realtime berdasarkan cabang dan bulan.</p>
               </div>
               <span id="historyCount" class="status" style="background:#f1f5f9;color:#334155;">0 data</span>
             </div>
@@ -475,6 +470,10 @@
                   <label for="historyMonth">Bulan</label>
                   <input id="historyMonth" type="month" />
                 </div>
+                <div class="field">
+                  <label for="historyDate">Tanggal</label>
+                  <input id="historyDate" type="date" />
+                </div>
               </div>
               <div style="height:12px"></div>
               <div id="historyList" class="history-list">
@@ -482,23 +481,25 @@
               </div>
             </div>
           </article>
-
-          <article class="card">
-            <div class="card-header"><div><h3>Ekspor Closing</h3><p>Pilih data dari form aktif atau histori.</p></div></div>
-            <div class="card-body">
-              <div class="hint" style="margin-top:0;">
-                <div>📊</div>
-                <div>Excel dibuat sebagai workbook dengan ringkasan closing dan detail transaksi. PDF dibuat dengan layout tabel yang siap dicetak / dikirim.</div>
-              </div>
-              <div style="height:10px"></div>
-              <div style="font-size:11px;color:var(--muted);line-height:1.6;">Nama file otomatis mengikuti format <strong>closing kasir, nama cabang, tanggal, bulan</strong>.</div>
-            </div>
-          </article>
         </aside>
       </section>
+</main>
+  </div>
 
-      <div class="footer-note">Closing Kasir Realtime • Firebase Firestore • Dibuat dalam satu file HTML</div>
-    </main>
+
+  <div id="branchCodeModal" class="branch-modal" aria-hidden="true">
+    <div class="branch-modal-card" role="dialog" aria-modal="true" aria-labelledby="branchCodeTitle">
+      <div class="branch-modal-icon">🔐</div>
+      <h3 id="branchCodeTitle">Verifikasi Cabang</h3>
+      <div id="branchCodeBranch" class="branch-modal-branch">-</div>
+      <label for="branchCodeInput">Kode Cabang</label>
+      <input id="branchCodeInput" class="branch-code-input" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••" />
+      <div id="branchCodeError" class="branch-code-error"></div>
+      <div class="branch-modal-actions">
+        <button id="branchCodeCancel" class="btn btn-secondary" type="button">Batal</button>
+        <button id="branchCodeVerify" class="btn btn-primary" type="button">Verifikasi</button>
+      </div>
+    </div>
   </div>
 
   <div id="toast" class="toast"></div>
@@ -544,6 +545,14 @@ const firebaseConfig = {
       "Wahid Hasyim"
     ];
 
+    // Kode akses cabang ditetapkan langsung oleh sistem.
+    const BRANCH_ACCESS_CODES = {
+      "Ayahanda": "2727",
+      "Setiabudi": "2727",
+      "Ringroad": "2727",
+      "Wahid Hasyim": "2727"
+    };
+
     const TZ = "Asia/Jakarta";
     const monthNames = [
       "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -562,6 +571,10 @@ const firebaseConfig = {
     let toastTimer = null;
     let isHydrating = false;
     let formDirty = false;
+    let branchAuthorized = false;
+    let authorizedBranch = "";
+    let pendingBranch = "";
+    let branchCodeResolver = null;
 
     const operationalRows = [];
     const mealRows = [];
@@ -597,6 +610,52 @@ const firebaseConfig = {
 
     function currentMonthKey() {
       return localDateKey().slice(0, 7);
+    }
+
+    function openBranchCodeModal(branch) {
+      pendingBranch = branch;
+      $("branchCodeBranch").textContent = branch;
+      $("branchCodeInput").value = "";
+      $("branchCodeError").textContent = "";
+      $("branchCodeModal").classList.add("show");
+      $("branchCodeModal").setAttribute("aria-hidden", "false");
+      setTimeout(() => $("branchCodeInput").focus(), 40);
+      return new Promise(resolve => { branchCodeResolver = resolve; });
+    }
+
+    function closeBranchCodeModal(result) {
+      $("branchCodeModal").classList.remove("show");
+      $("branchCodeModal").setAttribute("aria-hidden", "true");
+      const resolver = branchCodeResolver;
+      branchCodeResolver = null;
+      if (resolver) resolver(result);
+    }
+
+    function verifyBranchCode() {
+      const entered = String($("branchCodeInput").value || "").replace(/\D/g, "");
+      const expected = BRANCH_ACCESS_CODES[pendingBranch] || "";
+      if (entered.length !== 4) {
+        $("branchCodeError").textContent = "Masukkan 4 angka.";
+        return;
+      }
+      if (entered !== expected) {
+        $("branchCodeError").textContent = "Kode cabang salah.";
+        $("branchCodeInput").select();
+        return;
+      }
+      closeBranchCodeModal(true);
+    }
+
+    async function requireBranchAccess(branch) {
+      if (branchAuthorized && authorizedBranch === branch) return true;
+      branchAuthorized = false;
+      setFormEnabled(false);
+      const ok = await openBranchCodeModal(branch);
+      if (!ok) return false;
+      branchAuthorized = true;
+      authorizedBranch = branch;
+      setFormEnabled(true);
+      return true;
     }
 
     function formatDateKey(key) {
@@ -905,6 +964,7 @@ const firebaseConfig = {
       const today = localDateKey();
       $("closingDate").max = today;
       $("historyMonth").max = today.slice(0, 7);
+      $("historyDate").max = today;
       $("todayLabel").textContent = formatDateKey(today);
     }
 
@@ -929,7 +989,7 @@ const firebaseConfig = {
 
     function setFormEnabled(enabled) {
       document.querySelectorAll("input, select, textarea, button").forEach(el => {
-        if (["exportExcelBtn", "exportPdfBtn", "newClosingBtn"].includes(el.id)) return;
+        if (["exportExcelBtn", "exportPdfBtn", "newClosingBtn", "historyBranch", "historyMonth", "historyDate"].includes(el.id)) return;
         el.disabled = !enabled;
       });
       $("closingDate").disabled = false;
@@ -1232,18 +1292,25 @@ const firebaseConfig = {
       }
       const branch = $("historyBranch").value;
       const month = $("historyMonth").value || currentMonthKey();
+      const selectedDate = $("historyDate").value || "";
       $("historyMonth").value = month;
+      if (selectedDate && selectedDate.slice(0, 7) !== month) {
+        $("historyDate").value = "";
+      }
+      const activeDate = $("historyDate").value || "";
       const q = query(collection(db, "closings"), where("branchId", "==", sanitizeId(branch)));
       unsubscribeHistory = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
         const records = [];
         snapshot.forEach(snap => {
           const data = snap.data();
-          if (data.monthKey === month) records.push({ ...data, id: snap.id });
+          if (data.monthKey !== month) return;
+          if (activeDate && data.dateKey !== activeDate) return;
+          records.push({ ...data, id: snap.id });
         });
         records.sort((a,b) => String(b.dateKey).localeCompare(String(a.dateKey)));
         renderHistory(records);
         if (snapshot.metadata.fromCache) {
-          setStatus(navigator.onLine ? "Firebase aktif • cache lokal" : "Offline • cache lokal", navigator.onLine ? "ok" : "warn");
+          setStatus(navigator.onLine ? "Firebase aktif • cache lokal" : "Offline • cache lokal", "warn" );
         } else {
           setStatus("Realtime tersambung", "ok");
         }
@@ -1252,11 +1319,12 @@ const firebaseConfig = {
         handleFirebaseError(err, "Firestore history");
       });
     }
-
     function renderHistory(records) {
       $("historyCount").textContent = `${records.length} data`;
       if (!records.length) {
-        $("historyList").innerHTML = `<div class="empty">Belum ada closing pada ${escapeHtml(formatMonthKey($("historyMonth").value))} untuk ${escapeHtml($("historyBranch").value)}.</div>`;
+        const selectedDate = $("historyDate").value;
+        const rangeLabel = selectedDate ? formatDateKey(selectedDate) : formatMonthKey($("historyMonth").value);
+        $("historyList").innerHTML = `<div class="empty">Belum ada closing pada ${escapeHtml(rangeLabel)} untuk ${escapeHtml($("historyBranch").value)}.</div>`;
         return;
       }
       $("historyList").innerHTML = records.map(record => `
@@ -1266,7 +1334,7 @@ const firebaseConfig = {
             <div class="history-meta">Kasir: ${escapeHtml(record.cashierName || "-")} • SPV: ${escapeHtml(record.supervisorName || "-")}</div>
             <div class="history-meta">${escapeHtml(record.branch || "-")}</div>
           </div>
-          <div class="history-amount">${money(record.totals?.totalSales || 0)}<small>Penjualan</small></div>
+          <div class="history-amount">${money(record.totals?.totalSales || 0)}</div>
         </div>
       `).join("");
       $("historyList").querySelectorAll(".history-item").forEach(item => {
@@ -1427,8 +1495,7 @@ const firebaseConfig = {
 
     async function setupFirebase() {
       if (!firebaseConfigured() || !auth || !db) {
-        $("configBanner").classList.add("show");
-        $("historyList").innerHTML = `<div class="empty">Masukkan konfigurasi Firebase di bagian <strong>firebaseConfig</strong> pada file HTML.</div>`;
+        $("historyList").innerHTML = `<div class="empty">Firebase belum tersambung.</div>`;
         setStatus("Firebase belum dikonfigurasi", "warn");
         return;
       }
@@ -1450,6 +1517,19 @@ const firebaseConfig = {
     }
 
     function bindEvents() {
+      $("branchCodeVerify").addEventListener("click", verifyBranchCode);
+      $("branchCodeCancel").addEventListener("click", () => closeBranchCodeModal(false));
+      $("branchCodeInput").addEventListener("input", (e) => {
+        e.target.value = String(e.target.value || "").replace(/\D/g, "").slice(0, 4);
+        $("branchCodeError").textContent = "";
+      });
+      $("branchCodeInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); verifyBranchCode(); }
+        if (e.key === "Escape") { e.preventDefault(); closeBranchCodeModal(false); }
+      });
+      $("branchCodeModal").addEventListener("click", (e) => {
+        if (e.target === $("branchCodeModal")) closeBranchCodeModal(false);
+      });
       ["incomeCash","incomeQris","incomeTransfer","totalSales","brokenMoney","salesRemainder"].forEach(id => {
         $(id).addEventListener("input", () => {
           updateCalculations();
@@ -1467,15 +1547,40 @@ const firebaseConfig = {
         if (db && authUser) await loadRecord($("branch").value, $("closingDate").value, false);
       });
       $("branch").addEventListener("change", async () => {
-        localStorage.setItem("closingKasirBranch", $("branch").value);
-        markDirty();
-        subscribeCurrentRecord();
-        if (db && authUser && validateDate()) await loadRecord($("branch").value, $("closingDate").value, false);
-        $("historyBranch").value = $("branch").value;
+        const selectedBranch = $("branch").value;
+        const previousBranch = authorizedBranch || localStorage.getItem("closingKasirBranch") || BRANCHES[0];
+        if (selectedBranch === previousBranch && branchAuthorized) return;
+        const ok = await requireBranchAccess(selectedBranch);
+        if (!ok) {
+          isHydrating = true;
+          $("branch").value = previousBranch;
+          isHydrating = false;
+          branchAuthorized = !!authorizedBranch && authorizedBranch === previousBranch;
+          setFormEnabled(branchAuthorized);
+          return;
+        }
+        localStorage.setItem("closingKasirBranch", selectedBranch);
+        if (selectedBranch !== previousBranch) {
+          if (unsubscribeCurrent) { unsubscribeCurrent(); unsubscribeCurrent = null; }
+          resetForm(localDateKey(), selectedBranch);
+        } else {
+          subscribeCurrentRecord();
+          if (db && authUser && validateDate() && activeDocId) await loadRecord(selectedBranch, $("closingDate").value, false);
+        }
+        $("historyBranch").value = selectedBranch;
         subscribeHistory();
       });
       $("historyBranch").addEventListener("change", subscribeHistory);
-      $("historyMonth").addEventListener("change", subscribeHistory);
+      $("historyMonth").addEventListener("change", () => {
+        const month = $("historyMonth").value;
+        if ($("historyDate").value && $("historyDate").value.slice(0, 7) !== month) $("historyDate").value = "";
+        subscribeHistory();
+      });
+      $("historyDate").addEventListener("change", () => {
+        const date = $("historyDate").value;
+        if (date) $("historyMonth").value = date.slice(0, 7);
+        subscribeHistory();
+      });
       $("addOperationalBtn").addEventListener("click", () => addRow("operational"));
       $("addMealBtn").addEventListener("click", () => addRow("meal"));
       $("saveBtn").addEventListener("click", saveClosing);
@@ -1486,10 +1591,12 @@ const firebaseConfig = {
         if (unsubscribeCurrent) { unsubscribeCurrent(); unsubscribeCurrent = null; }
         resetForm(localDateKey(), $("branch").value);
       });
-      $("newClosingBtn").addEventListener("click", () => {
+      $("newClosingBtn").addEventListener("click", async () => {
         if (!confirmStartNewClosing()) return;
+        const branch = $("branch").value || BRANCHES[0];
+        if (!(await requireBranchAccess(branch))) return;
         if (unsubscribeCurrent) { unsubscribeCurrent(); unsubscribeCurrent = null; }
-        resetForm(localDateKey(), $("branch").value);
+        resetForm(localDateKey(), branch);
         window.scrollTo({ top: 0, behavior: "smooth" });
         showToast("Closing Baru siap diinput.", "success", 2200);
       });
@@ -1524,11 +1631,15 @@ const firebaseConfig = {
     setTodayUI();
     populateBranches();
     $("historyMonth").value = currentMonthKey();
+    $("historyDate").value = "";
+    $("historyDate").max = localDateKey();
     resetForm(localDateKey(), $("branch").value || BRANCHES[0]);
     bindEvents();
     bindAllRupiahInputs();
     updateCalculations();
+    setFormEnabled(false);
     setupFirebase();
+    requireBranchAccess($("branch").value || BRANCHES[0]).catch(() => setFormEnabled(false));
   </script>
 </body>
 </html>
