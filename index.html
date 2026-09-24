@@ -268,18 +268,111 @@
       .money-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .hero-card { padding:20px; }
     }
+    @media (max-width: 700px) {
+      body { overflow-x:hidden; }
+      .container { width:100%; max-width:none; }
+      .card, .hero-card { min-width:0; }
+      .table-wrap {
+        overflow:visible;
+        border:0;
+        border-radius:0;
+      }
+      table {
+        width:100%;
+        min-width:0;
+        border-collapse:separate;
+        border-spacing:0;
+      }
+      table thead { display:none; }
+      table tbody {
+        display:grid;
+        gap:10px;
+      }
+      table tbody tr {
+        display:block;
+        width:100%;
+        border:1px solid var(--line);
+        border-radius:14px;
+        background:#fff;
+        overflow:hidden;
+      }
+      table tbody td {
+        display:grid;
+        grid-template-columns:minmax(78px, 30%) minmax(0, 1fr);
+        gap:10px;
+        align-items:center;
+        width:100%;
+        padding:10px 11px;
+        border-bottom:1px solid #f2e5e6;
+        text-align:left;
+        min-width:0;
+      }
+      table tbody td::before {
+        content:attr(data-label);
+        color:var(--muted);
+        font-size:10px;
+        font-weight:800;
+        text-transform:uppercase;
+        letter-spacing:.35px;
+      }
+      table tbody td:last-child { border-bottom:0; }
+      table tbody td input { min-width:0; }
+      table tbody td.row-index { display:none; }
+      table tbody td.row-actions {
+        display:flex;
+        justify-content:flex-end;
+        align-items:center;
+        min-height:50px;
+        padding:9px 11px;
+      }
+      table tbody td.row-actions::before { display:none; }
+      .history-list {
+        max-height:none;
+        overflow:visible;
+      }
+      .history-item {
+        padding:12px;
+      }
+      .history-amount {
+        white-space:normal;
+        overflow:visible;
+        text-overflow:clip;
+      }
+      .action-bar .btn { min-height:44px; }
+      input, select, textarea { min-height:42px; }
+    }
+
     @media (max-width: 560px) {
-      .topbar-inner { align-items:flex-start; flex-direction:column; }
-      .topbar-actions { width:100%; justify-content:space-between; }
+      .topbar-inner { align-items:stretch; flex-direction:column; }
+      .topbar-actions {
+        width:100%;
+        justify-content:stretch;
+        display:grid;
+        grid-template-columns:1fr;
+      }
+      .topbar-actions .status,
+      .topbar-actions .btn { width:100%; }
       .form-grid, .history-tools { grid-template-columns:1fr; }
       .field.span-2 { grid-column:span 1; }
       .money-summary { grid-template-columns:1fr; }
       .card-body { padding:14px; }
-      .card-header { padding:15px 14px; }
+      .card-header {
+        padding:15px 14px;
+        align-items:flex-start;
+      }
+      .card-header .add-btn {
+        flex:0 0 auto;
+        max-width:55%;
+      }
       .history-item { grid-template-columns:1fr; }
       .history-amount { text-align:left; }
-      .action-bar { justify-content:stretch; }
-      .action-bar .btn { flex:1 1 140px; }
+      .action-bar {
+        justify-content:stretch;
+        display:grid;
+        grid-template-columns:1fr;
+      }
+      .action-bar .btn { width:100%; }
+      .hero-card { padding:18px; }
     }
   </style>
 </head>
@@ -358,9 +451,9 @@
                     <tr><th style="width:120px">Jenis</th><th>Nominal</th><th>Keterangan</th></tr>
                   </thead>
                   <tbody>
-                    <tr><td><strong>Cash</strong></td><td><input id="incomeCash" class="table-input money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" /></td><td><input id="incomeCashNote" class="table-input" type="text" placeholder="Keterangan cash (opsional)" /></td></tr>
-                    <tr><td><strong>QRIS</strong></td><td><input id="incomeQris" class="table-input money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" /></td><td><input id="incomeQrisNote" class="table-input" type="text" placeholder="Keterangan QRIS (opsional)" /></td></tr>
-                    <tr><td><strong>Transfer</strong></td><td><input id="incomeTransfer" class="table-input money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" /></td><td><input id="incomeTransferNote" class="table-input" type="text" placeholder="Keterangan transfer (opsional)" /></td></tr>
+                    <tr><td data-label="Jenis"><strong>Cash</strong></td><td data-label="Nominal"><input id="incomeCash" class="table-input money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" /></td><td data-label="Keterangan"><input id="incomeCashNote" class="table-input" type="text" placeholder="Keterangan cash (opsional)" /></td></tr>
+                    <tr><td data-label="Jenis"><strong>QRIS</strong></td><td data-label="Nominal"><input id="incomeQris" class="table-input money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" /></td><td data-label="Keterangan"><input id="incomeQrisNote" class="table-input" type="text" placeholder="Keterangan QRIS (opsional)" /></td></tr>
+                    <tr><td data-label="Jenis"><strong>Transfer</strong></td><td data-label="Nominal"><input id="incomeTransfer" class="table-input money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" /></td><td data-label="Keterangan"><input id="incomeTransferNote" class="table-input" type="text" placeholder="Keterangan transfer (opsional)" /></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -567,6 +660,7 @@ const firebaseConfig = {
     let toastTimer = null;
     let isHydrating = false;
     let formDirty = false;
+    let formEnabledState = false;
     let branchAuthorized = false;
     let authorizedBranch = "";
     let pendingBranch = "";
@@ -646,7 +740,10 @@ const firebaseConfig = {
     }
 
     async function requireBranchAccess(branch) {
-      if (branchAuthorized && authorizedBranch === branch) return true;
+      if (branchAuthorized && authorizedBranch === branch) {
+        setFormEnabled(true);
+        return true;
+      }
       branchAuthorized = false;
       setFormEnabled(false);
       const ok = await openBranchCodeModal(branch);
@@ -780,6 +877,7 @@ const firebaseConfig = {
     }
 
     function addRow(type, data = {}) {
+      if (!formEnabledState) return;
       const rows = type === "operational" ? operationalRows : mealRows;
       const row = {
         id: `${type}-${crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random()}`,
@@ -794,6 +892,7 @@ const firebaseConfig = {
     }
 
     function removeRow(type, id) {
+      if (!formEnabledState) return;
       const rows = type === "operational" ? operationalRows : mealRows;
       const index = rows.findIndex(row => row.id === id);
       if (index >= 0) rows.splice(index, 1);
@@ -815,10 +914,10 @@ const firebaseConfig = {
             ${rows.map((row, index) => `
               <tr data-row-id="${escapeHtml(row.id)}">
                 <td class="row-index">${index + 1}</td>
-                <td><input class="table-input expense-name" type="text" value="${escapeHtml(row.name || "")}" placeholder="Contoh: Ahmad" autocomplete="off" /></td>
-                <td><input class="table-input money money-input expense-amount" type="text" inputmode="numeric" autocomplete="off" value="${escapeHtml(formatRupiahInputValue(row.amount))}" placeholder="Rp 0" /></td>
-                <td><input class="table-input expense-note" type="text" value="${escapeHtml(row.note)}" placeholder="Contoh: beli perlengkapan / bukupay admin" /></td>
-                <td class="row-actions"><button class="remove-btn" type="button" title="Hapus baris">×</button></td>
+                <td data-label="Nama"><input class="table-input expense-name" type="text" value="${escapeHtml(row.name || "")}" placeholder="Contoh: Ahmad" autocomplete="off" ${formEnabledState ? "" : "disabled"} /></td>
+                <td data-label="Nominal"><input class="table-input money money-input expense-amount" type="text" inputmode="numeric" autocomplete="off" value="${escapeHtml(formatRupiahInputValue(row.amount))}" placeholder="Rp 0" ${formEnabledState ? "" : "disabled"} /></td>
+                <td data-label="Keterangan"><input class="table-input expense-note" type="text" value="${escapeHtml(row.note)}" placeholder="Contoh: beli perlengkapan / bukupay admin" ${formEnabledState ? "" : "disabled"} /></td>
+                <td class="row-actions" data-label=""><button class="remove-btn" type="button" title="Hapus baris" ${formEnabledState ? "" : "disabled"}>×</button></td>
               </tr>
             `).join("")}
           </tbody>
@@ -989,17 +1088,22 @@ const firebaseConfig = {
     }
 
     function setFormEnabled(enabled) {
+      formEnabledState = !!enabled;
       document.querySelectorAll("input, select, textarea, button").forEach(el => {
         if ([
           "exportExcelBtn", "exportPdfBtn", "newClosingBtn",
           "historyBranch", "historyMonth", "historyDate",
           "branch", "branchCodeInput", "branchCodeVerify", "branchCodeCancel"
         ].includes(el.id)) return;
-        el.disabled = !enabled;
+        el.disabled = !formEnabledState;
       });
-      $("closingDate").disabled = !enabled;
+      $("closingDate").disabled = !formEnabledState;
       $("branch").disabled = false;
-      $("saveBtn").disabled = !enabled;
+      $("saveBtn").disabled = !formEnabledState;
+
+      document.querySelectorAll(".expense-name, .expense-amount, .expense-note, .remove-btn").forEach(el => {
+        el.disabled = !formEnabledState;
+      });
     }
 
     function validateDate() {
@@ -1256,10 +1360,28 @@ const firebaseConfig = {
       validateDate();
     }
 
-    function loadActiveFromHistory(record) {
+    async function loadActiveFromHistory(record) {
+      if (!record?.branch) {
+        showToast("Data closing tidak memiliki cabang yang valid.", "error");
+        return false;
+      }
+
+      const authorized = await requireBranchAccess(record.branch);
+      if (!authorized) {
+        showToast("Verifikasi cabang dibatalkan. Closing tidak dibuka.", "warn", 3200);
+        return false;
+      }
+
+      isHydrating = true;
+      $("branch").value = record.branch;
+      isHydrating = false;
+      localStorage.setItem("closingKasirBranch", record.branch);
+
       applyRecord(record);
+      setFormEnabled(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
       showToast(`Membuka closing ${formatDateKey(record.dateKey)}.`, "success", 2400);
+      return true;
     }
 
     function subscribeCurrentRecord() {
@@ -1347,8 +1469,8 @@ const firebaseConfig = {
           const id = item.dataset.id;
           const record = records.find(r => r.id === id);
           if (!record) return;
-          loadActiveFromHistory(record);
-          subscribeCurrentRecord();
+          const opened = await loadActiveFromHistory(record);
+          if (opened) subscribeCurrentRecord();
         });
       });
     }
