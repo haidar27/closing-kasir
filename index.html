@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0f172a" />
   <meta name="description" content="Sistem Closing Harian Kasir realtime berbasis Firebase." />
+  <meta name="application-name" content="closing abben" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="closing abben" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="./icons/closing-abben.svg" />
+  <link rel="apple-touch-icon" href="./icons/closing-abben-192.png" />
   <title>Closing Kasir • Realtime</title>
 
   <!-- Export libraries -->
@@ -381,7 +388,13 @@
     <header class="topbar">
       <div class="topbar-inner">
         <div class="brand">
-          <div class="brand-mark">CK</div>
+          <div class="brand-mark" aria-label="Logo Closing Abben" role="img">
+            <svg viewBox="0 0 48 48" width="25" height="25" aria-hidden="true">
+              <rect x="9" y="6" width="30" height="36" rx="5" fill="none" stroke="currentColor" stroke-width="3"/>
+              <path d="M15 15h18M15 22h18M15 29h10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              <path d="M28 29h6M31 26v6" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/>
+            </svg>
+          </div>
           <div>
             <h1>Closing Kasir</h1>
           </div>
@@ -513,7 +526,7 @@
                 </div>
                 <div class="field">
                   <label for="salesRemainder">Tambahan Uang Pecah dari Omzet</label>
-                  <input id="salesRemainder" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
+                  <input id="salesRemainder" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" readonly />
                 </div>
               </div>
 
@@ -983,10 +996,13 @@ const firebaseConfig = {
       const totalSales = numericInput("totalSales");
       const brokenMoney = numericInput("brokenMoney");
 
-      // Uang pecah dari omzet adalah bagian dari omzet yang sengaja ditahan
-      // dan tidak disetor kepada owner. Karena itu nominal ini bukan selisih.
-      const salesRemainder = Math.max(0, numericInput("salesRemainder"));
-      const ownerWithdrawal = Math.max(0, totalSales - salesRemainder);
+      // Setoran Owner dibulatkan TURUN ke kelipatan Rp50.000.
+      // Sisa dari pembulatan otomatis menjadi tambahan uang pecah dari omzet.
+      const ownerDepositUnit = 50000;
+      const ownerWithdrawal = totalSales > 0
+        ? Math.floor(totalSales / ownerDepositUnit) * ownerDepositUnit
+        : 0;
+      const salesRemainder = Math.max(0, totalSales - ownerWithdrawal);
       const finalBrokenMoney = brokenMoney + salesRemainder;
 
       // Rekonsiliasi transparan:
@@ -1036,6 +1052,7 @@ const firebaseConfig = {
       $("finalIncomeDisplay").textContent = money(totals.totalIncome);
       $("finalExpenseDisplay").textContent = money(totals.totalExpenses);
       $("finalSalesDisplay").textContent = money(totals.totalSales);
+      setRupiahInputValue("salesRemainder", totals.salesRemainder);
       $("salesRemainderDisplay").textContent = money(totals.salesRemainder);
       $("finalBrokenMoneyDisplay").textContent = money(totals.finalBrokenMoney);
       $("ownerWithdrawalDisplay").textContent = money(totals.ownerWithdrawal);
@@ -1136,7 +1153,7 @@ const firebaseConfig = {
 
       const moneyFields = [
         "incomeCash", "incomeQris", "incomeTransfer",
-        "totalSales", "brokenMoney", "salesRemainder"
+        "totalSales", "brokenMoney"
       ];
       if (moneyFields.some(id => numericInput(id) > 0)) return true;
 
@@ -1400,8 +1417,9 @@ const firebaseConfig = {
           return;
         }
         setStatus("Realtime tersambung", "ok");
-        if (!formDirty || activeDocId === snap.id && currentRecord?.dateKey === remote.dateKey && currentRecord?.updatedBy === remote.updatedBy) {
-          if (!formDirty) applyRecord(remote);
+        if (!formDirty) {
+          applyRecord(remote);
+        } else if (activeDocId === snap.id && currentRecord?.dateKey === remote.dateKey && currentRecord?.updatedBy === remote.updatedBy) {
           currentRecord = remote;
         } else {
           showToast("Ada perubahan dari perangkat lain. Pilih data dari histori untuk memuat versi terbaru.", "warn", 5000);
@@ -1657,7 +1675,7 @@ const firebaseConfig = {
       $("branchCodeModal").addEventListener("click", (e) => {
         if (e.target === $("branchCodeModal")) closeBranchCodeModal(false);
       });
-      ["incomeCash","incomeQris","incomeTransfer","totalSales","brokenMoney","salesRemainder"].forEach(id => {
+      ["incomeCash","incomeQris","incomeTransfer","totalSales","brokenMoney"].forEach(id => {
         $(id).addEventListener("input", () => {
           updateCalculations();
           markDirty();
