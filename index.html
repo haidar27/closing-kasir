@@ -997,21 +997,23 @@ const firebaseConfig = {
       const totalSales = numericInput("totalSales");
       const brokenMoney = numericInput("brokenMoney");
 
-      // Setoran Owner dibulatkan TURUN ke kelipatan Rp50.000.
-      // Sisa dari pembulatan otomatis menjadi tambahan uang pecah dari omzet.
+      // Setoran QRIS mengikuti seluruh nominal QRIS yang tersedia.
+      const qrisOwnerDeposit = Math.min(baseQris, totalSales);
+
+      // Bagian non-QRIS menjadi dasar Setoran Cash. Setoran Cash dibulatkan
+      // TURUN ke kelipatan Rp50.000. Sisa dari cash otomatis menjadi uang pecah.
+      const cashBeforeRounding = Math.max(0, totalSales - qrisOwnerDeposit);
       const ownerDepositUnit = 50000;
-      const ownerWithdrawal = totalSales > 0
-        ? Math.floor(totalSales / ownerDepositUnit) * ownerDepositUnit
+      const cashOwnerDeposit = cashBeforeRounding > 0
+        ? Math.floor(cashBeforeRounding / ownerDepositUnit) * ownerDepositUnit
         : 0;
+      const cashRemainder = Math.max(0, cashBeforeRounding - cashOwnerDeposit);
+
+      // Total setoran owner adalah gabungan Setoran QRIS + Setoran Cash yang
+      // sudah dibulatkan. Seluruh sisa otomatis masuk ke Uang Pecah.
+      const ownerWithdrawal = qrisOwnerDeposit + cashOwnerDeposit;
       const salesRemainder = Math.max(0, totalSales - ownerWithdrawal);
       const finalBrokenMoney = brokenMoney + salesRemainder;
-
-      // Setoran Owner dibagi menjadi Setoran QRIS dan Setoran Cash.
-      // Setoran QRIS mengikuti nominal QRIS, maksimal sebesar total setoran owner.
-      // Sisanya menjadi Setoran Cash agar keduanya selalu berjumlah sama dengan
-      // total Setoran Owner yang sudah dibulatkan.
-      const qrisOwnerDeposit = Math.min(baseQris, ownerWithdrawal);
-      const cashOwnerDeposit = Math.max(0, ownerWithdrawal - qrisOwnerDeposit);
 
       // Rekonsiliasi transparan:
       // Total terhitung = Cash + QRIS + Transfer + tambahan uang pecah dari omzet.
