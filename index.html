@@ -536,7 +536,8 @@
                 <div class="stat primary"><div class="label">Total Penjualan / Omzet</div><div id="finalSalesDisplay" class="value">Rp 0</div></div>
                 <div class="stat warning"><div class="label">Tambahan Uang Pecah dari Omzet</div><div id="salesRemainderDisplay" class="value">Rp 0</div></div>
                 <div class="stat"><div class="label">Uang Pecah Akhir</div><div id="finalBrokenMoneyDisplay" class="value">Rp 0</div></div>
-                <div class="stat success"><div class="label">Setoran Owner</div><div id="ownerWithdrawalDisplay" class="value">Rp 0</div></div>
+                <div class="stat success"><div class="label">Setoran QRIS</div><div id="qrisOwnerDepositDisplay" class="value">Rp 0</div></div>
+                <div class="stat success"><div class="label">Setoran Cash</div><div id="cashOwnerDepositDisplay" class="value">Rp 0</div></div>
                 <div id="differenceStat" class="stat danger">
                   <div class="label">Total Selisih</div>
                   <div id="differenceDisplay" class="value">Rp 0</div>
@@ -1005,6 +1006,13 @@ const firebaseConfig = {
       const salesRemainder = Math.max(0, totalSales - ownerWithdrawal);
       const finalBrokenMoney = brokenMoney + salesRemainder;
 
+      // Setoran Owner dibagi menjadi Setoran QRIS dan Setoran Cash.
+      // Setoran QRIS mengikuti nominal QRIS, maksimal sebesar total setoran owner.
+      // Sisanya menjadi Setoran Cash agar keduanya selalu berjumlah sama dengan
+      // total Setoran Owner yang sudah dibulatkan.
+      const qrisOwnerDeposit = Math.min(baseQris, ownerWithdrawal);
+      const cashOwnerDeposit = Math.max(0, ownerWithdrawal - qrisOwnerDeposit);
+
       // Rekonsiliasi transparan:
       // Total terhitung = Cash + QRIS + Transfer + tambahan uang pecah dari omzet.
       // Total terhitung dibandingkan langsung dengan total omzet.
@@ -1030,6 +1038,8 @@ const firebaseConfig = {
         brokenMoney,
         salesRemainder,
         ownerWithdrawal,
+        qrisOwnerDeposit,
+        cashOwnerDeposit,
         finalBrokenMoney,
         expectedOwnerSettlement,
         actualOwnerSettlement,
@@ -1055,7 +1065,8 @@ const firebaseConfig = {
       setRupiahInputValue("salesRemainder", totals.salesRemainder);
       $("salesRemainderDisplay").textContent = money(totals.salesRemainder);
       $("finalBrokenMoneyDisplay").textContent = money(totals.finalBrokenMoney);
-      $("ownerWithdrawalDisplay").textContent = money(totals.ownerWithdrawal);
+      $("qrisOwnerDepositDisplay").textContent = money(totals.qrisOwnerDeposit);
+      $("cashOwnerDepositDisplay").textContent = money(totals.cashOwnerDeposit);
 
       $("differenceDisplay").textContent = signedMoney(totals.difference);
 
@@ -1249,6 +1260,8 @@ const firebaseConfig = {
           brokenMoneyInitial: totals.brokenMoney,
           salesRemainder: totals.salesRemainder,
           ownerWithdrawal: totals.ownerWithdrawal,
+          qrisOwnerDeposit: totals.qrisOwnerDeposit,
+          cashOwnerDeposit: totals.cashOwnerDeposit,
           expectedOwnerSettlement: totals.expectedOwnerSettlement,
           actualOwnerSettlement: totals.actualOwnerSettlement,
           finalBrokenMoney: totals.finalBrokenMoney
@@ -1363,6 +1376,8 @@ const firebaseConfig = {
           brokenMoneyInitial: recalculated.brokenMoney,
           salesRemainder: recalculated.salesRemainder,
           ownerWithdrawal: recalculated.ownerWithdrawal,
+          qrisOwnerDeposit: recalculated.qrisOwnerDeposit,
+          cashOwnerDeposit: recalculated.cashOwnerDeposit,
           expectedOwnerSettlement: recalculated.expectedOwnerSettlement,
           actualOwnerSettlement: recalculated.actualOwnerSettlement,
           finalBrokenMoney: recalculated.finalBrokenMoney
@@ -1533,6 +1548,8 @@ const firebaseConfig = {
           ["Uang Pecah Awal", totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0],
           ["Tambahan Uang Pecah dari Omzet", totals.salesRemainder || 0],
           ["Uang Pecah Akhir", totals.finalBrokenMoney ?? totals.brokenMoney ?? 0],
+          ["Setoran QRIS", totals.qrisOwnerDeposit ?? 0],
+          ["Setoran Cash", totals.cashOwnerDeposit ?? 0],
           ["Setoran Owner", (totals.ownerWithdrawal ?? totals.totalSales ?? 0)],
           ["Total Omzet / Setoran Seharusnya", totals.expectedOwnerSettlement ?? 0],
           ["Total Terhitung untuk Rekonsiliasi", totals.actualOwnerSettlement ?? 0],
