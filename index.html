@@ -1016,11 +1016,12 @@ const firebaseConfig = {
       const finalBrokenMoney = brokenMoney + salesRemainder;
 
       // Rekonsiliasi transparan:
-      // Total terhitung = Cash + QRIS + Transfer + tambahan uang pecah dari omzet.
-      // Total terhitung dibandingkan langsung dengan total omzet.
-      // Pengeluaran TIDAK ikut masuk rumus karena hanya menjadi informasi.
+      // Selisih membandingkan total pemasukan aktual dengan total omzet.
+      // Uang yang tidak disetor karena pembulatan Setoran Cash sudah menjadi
+      // salesRemainder dan masuk ke Uang Pecah, sehingga TIDAK dihitung lagi
+      // sebagai selisih. Pengeluaran tetap hanya menjadi informasi.
       const expectedOwnerSettlement = totalSales;
-      const actualOwnerSettlement = totalIncome + salesRemainder;
+      const actualOwnerSettlement = totalIncome;
       const difference = actualOwnerSettlement - expectedOwnerSettlement;
 
       const operationalTotal = operationalRows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
@@ -1078,10 +1079,10 @@ const firebaseConfig = {
 
       if (totals.difference > 0) {
         diffStat.classList.add("success");
-        diffStatus.textContent = "PLUS • pemasukan + uang pecah lebih besar dari omzet";
+        diffStatus.textContent = "PLUS • total pemasukan lebih besar dari omzet";
       } else if (totals.difference < 0) {
         diffStat.classList.add("danger");
-        diffStatus.textContent = "MINUS • pemasukan + uang pecah lebih kecil dari omzet";
+        diffStatus.textContent = "MINUS • total pemasukan lebih kecil dari omzet";
       } else {
         diffStat.classList.add("success");
         diffStatus.textContent = "PAS • sesuai dengan omzet";
@@ -1556,7 +1557,7 @@ const firebaseConfig = {
           ["Total Omzet / Setoran Seharusnya", totals.expectedOwnerSettlement ?? 0],
           ["Total Terhitung untuk Rekonsiliasi", totals.actualOwnerSettlement ?? 0],
           ["Total Selisih Rekonsiliasi", signedMoney(totals.difference || 0)],
-          ["Rumus Selisih", "(Cash + QRIS + Transfer + Tambahan Uang Pecah dari Omzet) − Total Omzet"]
+          ["Rumus Selisih", "(Cash + QRIS + Transfer) − Total Omzet"]
         ],
         details: [
           ["Jenis", "Kategori", "Nama", "Nominal", "Keterangan"],
