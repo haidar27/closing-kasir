@@ -143,6 +143,8 @@
 
     .money-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top: 18px; }
     .money-summary.three-col { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .money-summary.four-col { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    input[readonly] { background:#f8fafc; color:#475569; cursor:default; }
     .stat {
       border:1px solid var(--line); background:var(--surface-soft); border-radius:14px; padding:14px;
       min-width:0;
@@ -275,6 +277,7 @@
       .field.span-2 { grid-column:span 2; }
       .money-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .money-summary.three-col { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .money-summary.four-col { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .hero-card { padding:20px; }
     }
     @media (max-width: 700px) {
@@ -365,6 +368,7 @@
       .field.span-2 { grid-column:span 1; }
       .money-summary { grid-template-columns:1fr; }
       .money-summary.three-col { grid-template-columns:1fr; }
+      .money-summary.four-col { grid-template-columns:1fr; }
       .card-body { padding:14px; }
       .card-header {
         padding:15px 14px;
@@ -578,6 +582,31 @@
                 </div>
               </div>
 
+              <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
+                <div class="section-title">
+                  <h4>Informasi Singkat</h4>
+                  <p>Setoran tunai dibulatkan turun ke kelipatan Rp50.000.</p>
+                </div>
+                <div class="money-summary four-col" style="margin-top:0;">
+                  <div class="stat primary">
+                    <div class="label">Setoran Cash (Dibulatkan)</div>
+                    <div id="cashDepositDisplay" class="value">Rp 0</div>
+                  </div>
+                  <div class="stat warning">
+                    <div class="label">Sisa Omzet → Uang Pecah</div>
+                    <div id="turnoverRemainderDisplay" class="value">Rp 0</div>
+                  </div>
+                  <div class="stat">
+                    <div class="label">Uang Pecah Sebelum Tambahan</div>
+                    <div id="brokenMoneyBeforeRemainderDisplay" class="value">Rp 0</div>
+                  </div>
+                  <div class="stat success">
+                    <div class="label">Uang Pecah Setelah Tambahan</div>
+                    <div id="brokenMoneyAfterRemainderDisplay" class="value">Rp 0</div>
+                  </div>
+                </div>
+              </div>
+
               <div class="action-bar">
                 <button id="resetBtn" class="btn btn-secondary" type="button">Reset Form</button>
                 <button id="exportExcelBtn" class="btn btn-dark" type="button" disabled>Export Excel</button>
@@ -599,8 +628,8 @@
             <div class="card-body">
               <div class="history-tools">
                 <div class="field">
-                  <label for="historyBranch">Cabang</label>
-                  <select id="historyBranch"></select>
+                  <label for="historyBranch">Cabang Histori</label>
+                  <input id="historyBranch" type="text" value="" placeholder="Pilih dan verifikasi cabang" readonly aria-label="Cabang histori yang sedang dibuka" />
                 </div>
                 <div class="field">
                   <label for="historyMonth">Bulan</label>
@@ -1127,6 +1156,10 @@ const firebaseConfig = {
             hasPreviousBrokenMoney: totals.hasPreviousBrokenMoney,
             brokenMoneyDifference: totals.brokenMoneyDifference,
             reconciliationTotal: totals.reconciliationTotal,
+            cashDepositAmount: totals.cashDepositAmount,
+            turnoverRemainder: totals.turnoverRemainder,
+            brokenMoneyBeforeTurnoverRemainder: totals.brokenMoneyBeforeTurnoverRemainder,
+            brokenMoneyAfterTurnoverRemainder: totals.brokenMoneyAfterTurnoverRemainder,
             totalIncome: totals.totalIncome,
             totalCash: totals.totalCash,
             totalQris: totals.totalQris,
@@ -1182,8 +1215,14 @@ const firebaseConfig = {
         ? brokenMoney - previousBrokenMoney
         : null;
 
-      // Uang Pecah Saat Ini hanya mengikuti nominal manual yang diinput.
-      // Tidak ada sisa omzet yang otomatis ditambahkan ke uang pecah.
+      // Setoran tunai dibulatkan TURUN ke kelipatan Rp50.000.
+      // Sisa omzet ditampilkan sebagai informasi terpisah; tidak mengubah
+      // input manual uang pecah maupun perhitungan selisih harian.
+      const cashDepositUnit = 50000;
+      const cashDepositAmount = Math.floor(totalSales / cashDepositUnit) * cashDepositUnit;
+      const turnoverRemainder = Math.max(0, totalSales - cashDepositAmount);
+      const brokenMoneyBeforeTurnoverRemainder = brokenMoney;
+      const brokenMoneyAfterTurnoverRemainder = brokenMoney + turnoverRemainder;
       const finalBrokenMoney = brokenMoney;
 
       // Rekonsiliasi:
@@ -1221,6 +1260,10 @@ const firebaseConfig = {
         hasPreviousBrokenMoney,
         brokenMoneyDifference,
         reconciliationTotal,
+        cashDepositAmount,
+        turnoverRemainder,
+        brokenMoneyBeforeTurnoverRemainder,
+        brokenMoneyAfterTurnoverRemainder,
         finalBrokenMoney,
         expectedOwnerSettlement,
         actualOwnerSettlement,
@@ -1244,7 +1287,11 @@ const firebaseConfig = {
       $("reconciliationTotalDisplay").textContent = money(totals.reconciliationTotal);
       $("finalSalesDisplay").textContent = money(totals.totalSales);
       $("finalBrokenMoneyDisplay").textContent = money(totals.finalBrokenMoney);
-      $("currentBrokenMoneyNote").textContent = "Sesuai nominal uang pecah yang diinput hari ini.";
+      $("currentBrokenMoneyNote").textContent = "Sesuai nominal uang pecah yang diinput hari ini, sebelum sisa omzet.";
+      $("cashDepositDisplay").textContent = money(totals.cashDepositAmount);
+      $("turnoverRemainderDisplay").textContent = money(totals.turnoverRemainder);
+      $("brokenMoneyBeforeRemainderDisplay").textContent = money(totals.brokenMoneyBeforeTurnoverRemainder);
+      $("brokenMoneyAfterRemainderDisplay").textContent = money(totals.brokenMoneyAfterTurnoverRemainder);
 
       $("brokenMoneyDifferenceDisplay").textContent = totals.hasPreviousBrokenMoney
         ? signedMoney(totals.brokenMoneyDifference)
@@ -1298,12 +1345,10 @@ const firebaseConfig = {
       const history = $("historyBranch");
       main.innerHTML = `<option value="" selected disabled>Pilih Cabang</option>` +
         BRANCHES.map(branch => `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`).join("");
-      history.innerHTML = BRANCHES.map(branch => `<option value="${escapeHtml(branch)}">${escapeHtml(branch)}</option>`).join("");
-
-      const lastBranch = localStorage.getItem("closingKasirBranch") || BRANCHES[0];
-      if (BRANCHES.includes(lastBranch)) {
-        history.value = lastBranch;
-      }
+      // Histori tidak menyediakan pilihan cabang. Cabangnya mengikuti cabang
+      // yang sudah diverifikasi pada form utama.
+      history.value = "";
+      history.placeholder = "Pilih dan verifikasi cabang";
       main.value = "";
     }
 
@@ -1430,7 +1475,7 @@ const firebaseConfig = {
       const monthKey = dateKey.slice(0, 7);
       const totals = computeTotals();
       return {
-        schemaVersion: 6,
+        schemaVersion: 7,
         dateKey,
         monthKey,
         branchId: sanitizeId(branch),
@@ -1472,6 +1517,10 @@ const firebaseConfig = {
           previousBrokenMoneyDate: totals.previousBrokenMoneyDate,
           hasPreviousBrokenMoney: totals.hasPreviousBrokenMoney,
           brokenMoneyDifference: totals.brokenMoneyDifference,
+          cashDepositAmount: totals.cashDepositAmount,
+          turnoverRemainder: totals.turnoverRemainder,
+          brokenMoneyBeforeTurnoverRemainder: totals.brokenMoneyBeforeTurnoverRemainder,
+          brokenMoneyAfterTurnoverRemainder: totals.brokenMoneyAfterTurnoverRemainder,
           salesRemainder: 0,
           ownerWithdrawal: 0,
           qrisOwnerDeposit: 0,
@@ -1630,6 +1679,10 @@ const firebaseConfig = {
           previousBrokenMoneyDate: recalculated.previousBrokenMoneyDate,
           hasPreviousBrokenMoney: recalculated.hasPreviousBrokenMoney,
           brokenMoneyDifference: recalculated.brokenMoneyDifference,
+          cashDepositAmount: recalculated.cashDepositAmount,
+          turnoverRemainder: recalculated.turnoverRemainder,
+          brokenMoneyBeforeTurnoverRemainder: recalculated.brokenMoneyBeforeTurnoverRemainder,
+          brokenMoneyAfterTurnoverRemainder: recalculated.brokenMoneyAfterTurnoverRemainder,
           salesRemainder: 0,
           ownerWithdrawal: 0,
           qrisOwnerDeposit: 0,
@@ -1652,6 +1705,10 @@ const firebaseConfig = {
     async function loadActiveFromHistory(record) {
       if (!record?.branch) {
         showToast("Data closing tidak memiliki cabang yang valid.", "error");
+        return false;
+      }
+      if (!branchAuthorized || !authorizedBranch || record.branch !== authorizedBranch || $("branch").value !== authorizedBranch) {
+        showToast("Histori hanya bisa dibuka untuk cabang yang sedang diverifikasi.", "error");
         return false;
       }
 
@@ -1712,11 +1769,19 @@ const firebaseConfig = {
 
     function subscribeHistory() {
       if (unsubscribeHistory) { unsubscribeHistory(); unsubscribeHistory = null; }
+      const branch = branchAuthorized && authorizedBranch && $("branch").value === authorizedBranch
+        ? authorizedBranch
+        : "";
+      $("historyBranch").value = branch;
+      if (!branch) {
+        $("historyCount").textContent = "0 data";
+        $("historyList").innerHTML = `<div class="empty">Pilih dan verifikasi cabang untuk melihat histori closing cabang tersebut.</div>`;
+        return;
+      }
       if (!db || !authUser) {
         $("historyList").innerHTML = `<div class="empty">Firebase belum tersambung.</div>`;
         return;
       }
-      const branch = $("historyBranch").value;
       const month = $("historyMonth").value || currentMonthKey();
       const selectedDate = $("historyDate").value || "";
       $("historyMonth").value = month;
@@ -1726,6 +1791,8 @@ const firebaseConfig = {
       const activeDate = $("historyDate").value || "";
       const q = query(collection(db, "closings"), where("branchId", "==", sanitizeId(branch)));
       unsubscribeHistory = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+        // Abaikan callback listener lama apabila cabang yang aktif sudah berubah.
+        if (!branchAuthorized || authorizedBranch !== branch || $("branch").value !== branch || $("historyBranch").value !== branch) return;
         const records = [];
         snapshot.forEach(snap => {
           const data = snap.data();
@@ -1788,6 +1855,15 @@ const firebaseConfig = {
       const income = record.income || {};
       const operational = record.operationalExpenses || [];
       const meals = record.mealExpenses || [];
+      const totalSalesValue = Number(totals.totalSales || 0);
+      const cashDepositAmount = Number(totals.cashDepositAmount ?? Math.floor(totalSalesValue / 50000) * 50000);
+      const turnoverRemainder = Number(totals.turnoverRemainder ?? Math.max(0, totalSalesValue - cashDepositAmount));
+      const brokenMoneyBeforeTurnoverRemainder = Number(
+        totals.brokenMoneyBeforeTurnoverRemainder ?? totals.brokenMoneyCounted ?? totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0
+      );
+      const brokenMoneyAfterTurnoverRemainder = Number(
+        totals.brokenMoneyAfterTurnoverRemainder ?? (brokenMoneyBeforeTurnoverRemainder + turnoverRemainder)
+      );
       return {
         summary: [
           ["CLOSING KASIR"],
@@ -1816,7 +1892,13 @@ const firebaseConfig = {
           ["REKAP AKHIR"],
           ["Total Penjualan / Omzet", totals.totalSales || 0],
           ["Selisih (Total Rekonsiliasi − Total Penjualan)", signedMoney(totals.difference || 0)],
-          ["Uang Pecah Saat Ini (input manual)", totals.brokenMoneyCounted ?? totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0]
+          ["Uang Pecah Saat Ini (input manual, sebelum sisa omzet)", brokenMoneyBeforeTurnoverRemainder],
+          [],
+          ["INFORMASI SINGKAT"],
+          ["Setoran Cash (dibulatkan turun ke kelipatan Rp50.000)", cashDepositAmount],
+          ["Sisa Omzet → Uang Pecah", turnoverRemainder],
+          ["Uang Pecah Sebelum Tambahan Sisa Omzet", brokenMoneyBeforeTurnoverRemainder],
+          ["Uang Pecah Setelah Tambahan Sisa Omzet", brokenMoneyAfterTurnoverRemainder]
         ],
         details: [
           ["Jenis", "Kategori", "Nama", "Nominal", "Keterangan"],
@@ -1977,12 +2059,21 @@ const firebaseConfig = {
 
         if (!selectedBranch) {
           branchAuthorized = false;
+          authorizedBranch = "";
+          $("historyBranch").value = "";
           setFormEnabled(false);
+          subscribeHistory();
           return;
         }
 
         if (selectedBranch === previousBranch && branchAuthorized) return;
 
+        // Kosongkan histori selama proses verifikasi cabang baru agar data
+        // cabang sebelumnya tidak tampak seolah milik cabang yang dipilih.
+        if (selectedBranch !== previousBranch) {
+          $("historyBranch").value = "";
+          subscribeHistory();
+        }
         const ok = await requireBranchAccess(selectedBranch);
         if (!ok) {
           isHydrating = true;
@@ -1993,6 +2084,8 @@ const firebaseConfig = {
             authorizedBranch = "";
           }
           setFormEnabled(branchAuthorized);
+          $("historyBranch").value = branchAuthorized ? previousBranch : "";
+          subscribeHistory();
           return;
         }
 
@@ -2007,7 +2100,6 @@ const firebaseConfig = {
         $("historyBranch").value = selectedBranch;
         subscribeHistory();
       });
-      $("historyBranch").addEventListener("change", subscribeHistory);
       $("historyMonth").addEventListener("change", () => {
         const month = $("historyMonth").value;
         if ($("historyDate").value && $("historyDate").value.slice(0, 7) !== month) $("historyDate").value = "";
