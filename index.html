@@ -574,7 +574,7 @@
                 <div class="stat">
                   <div class="label">Uang Pecah Saat Ini</div>
                   <div id="finalBrokenMoneyDisplay" class="value">Rp 0</div>
-                  <div id="currentBrokenMoneyNote" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;">Termasuk sisa omzet jika ada.</div>
+                  <div id="currentBrokenMoneyNote" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;">Sesuai nominal uang pecah yang diinput hari ini.</div>
                 </div>
               </div>
 
@@ -1136,7 +1136,10 @@ const firebaseConfig = {
             totalSales: totals.totalSales,
             difference: totals.difference,
             finalBrokenMoney: totals.finalBrokenMoney,
-            salesRemainder: totals.salesRemainder,
+            salesRemainder: 0,
+            ownerWithdrawal: 0,
+            qrisOwnerDeposit: 0,
+            cashOwnerDeposit: 0,
             actualOwnerSettlement: totals.actualOwnerSettlement,
             expectedOwnerSettlement: totals.expectedOwnerSettlement
           }
@@ -1179,23 +1182,9 @@ const firebaseConfig = {
         ? brokenMoney - previousBrokenMoney
         : null;
 
-      // Setoran QRIS mengikuti seluruh nominal QRIS yang tersedia.
-      const qrisOwnerDeposit = Math.min(adjustedQris, totalSales);
-
-      // Bagian non-QRIS menjadi dasar Setoran Cash. Setoran Cash dibulatkan
-      // TURUN ke kelipatan Rp50.000. Sisa dari cash otomatis menjadi uang pecah.
-      const cashBeforeRounding = Math.max(0, totalSales - qrisOwnerDeposit);
-      const ownerDepositUnit = 50000;
-      const cashOwnerDeposit = cashBeforeRounding > 0
-        ? Math.floor(cashBeforeRounding / ownerDepositUnit) * ownerDepositUnit
-        : 0;
-      const cashRemainder = Math.max(0, cashBeforeRounding - cashOwnerDeposit);
-
-      // Total setoran owner adalah gabungan Setoran QRIS + Setoran Cash yang
-      // sudah dibulatkan. Seluruh sisa otomatis masuk ke Uang Pecah.
-      const ownerWithdrawal = qrisOwnerDeposit + cashOwnerDeposit;
-      const salesRemainder = Math.max(0, totalSales - ownerWithdrawal);
-      const finalBrokenMoney = brokenMoney + salesRemainder;
+      // Uang Pecah Saat Ini hanya mengikuti nominal manual yang diinput.
+      // Tidak ada sisa omzet yang otomatis ditambahkan ke uang pecah.
+      const finalBrokenMoney = brokenMoney;
 
       // Rekonsiliasi:
       // Selisih uang pecah bertanda minus jika uang pecah berkurang dan plus
@@ -1232,10 +1221,6 @@ const firebaseConfig = {
         hasPreviousBrokenMoney,
         brokenMoneyDifference,
         reconciliationTotal,
-        salesRemainder,
-        ownerWithdrawal,
-        qrisOwnerDeposit,
-        cashOwnerDeposit,
         finalBrokenMoney,
         expectedOwnerSettlement,
         actualOwnerSettlement,
@@ -1259,9 +1244,7 @@ const firebaseConfig = {
       $("reconciliationTotalDisplay").textContent = money(totals.reconciliationTotal);
       $("finalSalesDisplay").textContent = money(totals.totalSales);
       $("finalBrokenMoneyDisplay").textContent = money(totals.finalBrokenMoney);
-      $("currentBrokenMoneyNote").textContent = totals.salesRemainder > 0
-        ? `Termasuk sisa omzet ${money(totals.salesRemainder)}.`
-        : "Tidak ada tambahan sisa omzet.";
+      $("currentBrokenMoneyNote").textContent = "Sesuai nominal uang pecah yang diinput hari ini.";
 
       $("brokenMoneyDifferenceDisplay").textContent = totals.hasPreviousBrokenMoney
         ? signedMoney(totals.brokenMoneyDifference)
@@ -1489,10 +1472,10 @@ const firebaseConfig = {
           previousBrokenMoneyDate: totals.previousBrokenMoneyDate,
           hasPreviousBrokenMoney: totals.hasPreviousBrokenMoney,
           brokenMoneyDifference: totals.brokenMoneyDifference,
-          salesRemainder: totals.salesRemainder,
-          ownerWithdrawal: totals.ownerWithdrawal,
-          qrisOwnerDeposit: totals.qrisOwnerDeposit,
-          cashOwnerDeposit: totals.cashOwnerDeposit,
+          salesRemainder: 0,
+          ownerWithdrawal: 0,
+          qrisOwnerDeposit: 0,
+          cashOwnerDeposit: 0,
           expectedOwnerSettlement: totals.expectedOwnerSettlement,
           actualOwnerSettlement: totals.actualOwnerSettlement,
           finalBrokenMoney: totals.finalBrokenMoney
@@ -1508,9 +1491,6 @@ const firebaseConfig = {
       if (!payload.branch) return "Cabang wajib dipilih.";
       if (!payload.cashierName) return "Nama kasir wajib diisi.";
       if (!payload.supervisorName) return "Nama supervisor wajib diisi.";
-      if ((payload.totals?.salesRemainder || 0) > (payload.totals?.totalSales || 0)) {
-        return "Tambahan uang pecah dari omzet tidak boleh lebih besar dari total omzet.";
-      }
       return "";
     }
 
@@ -1650,10 +1630,10 @@ const firebaseConfig = {
           previousBrokenMoneyDate: recalculated.previousBrokenMoneyDate,
           hasPreviousBrokenMoney: recalculated.hasPreviousBrokenMoney,
           brokenMoneyDifference: recalculated.brokenMoneyDifference,
-          salesRemainder: recalculated.salesRemainder,
-          ownerWithdrawal: recalculated.ownerWithdrawal,
-          qrisOwnerDeposit: recalculated.qrisOwnerDeposit,
-          cashOwnerDeposit: recalculated.cashOwnerDeposit,
+          salesRemainder: 0,
+          ownerWithdrawal: 0,
+          qrisOwnerDeposit: 0,
+          cashOwnerDeposit: 0,
           expectedOwnerSettlement: recalculated.expectedOwnerSettlement,
           actualOwnerSettlement: recalculated.actualOwnerSettlement,
           finalBrokenMoney: recalculated.finalBrokenMoney
@@ -1681,8 +1661,13 @@ const firebaseConfig = {
         return false;
       }
 
+      // Putuskan listener record sebelumnya sebelum memuat pilihan histori baru.
+      // Callback lama yang sudah antre juga dilindungi guard di subscribeCurrentRecord().
+      if (unsubscribeCurrent) { unsubscribeCurrent(); unsubscribeCurrent = null; }
+
       isHydrating = true;
       $("branch").value = record.branch;
+      $("closingDate").value = record.dateKey || localDateKey();
       isHydrating = false;
       localStorage.setItem("closingKasirBranch", record.branch);
 
@@ -1702,6 +1687,10 @@ const firebaseConfig = {
       if (!activeDocId && !currentRecord) return;
       const ref = doc(db, "closings", documentId(branch, dateKey));
       unsubscribeCurrent = onSnapshot(ref, { includeMetadataChanges: true }, (snap) => {
+        // Abaikan callback tertunda dari subscription tanggal/cabang lama.
+        // Ini menjaga indikator histori dan form tetap mengikuti record yang sedang dibuka.
+        const visibleRecordId = documentId($("branch").value, $("closingDate").value);
+        if (snap.id !== visibleRecordId || snap.id !== activeDocId) return;
         if (!snap.exists()) return;
         const remote = { ...snap.data(), id: snap.id };
         if (snap.metadata.hasPendingWrites) {
@@ -1780,7 +1769,10 @@ const firebaseConfig = {
           const record = records.find(r => r.id === id);
           if (!record) return;
           const opened = await loadActiveFromHistory(record);
-          if (opened) subscribeCurrentRecord();
+          if (opened) {
+            subscribeCurrentRecord();
+            renderHistory(records);
+          }
         });
       });
     }
@@ -1824,7 +1816,7 @@ const firebaseConfig = {
           ["REKAP AKHIR"],
           ["Total Penjualan / Omzet", totals.totalSales || 0],
           ["Selisih (Total Rekonsiliasi − Total Penjualan)", signedMoney(totals.difference || 0)],
-          [`Uang Pecah Saat Ini${Number(totals.salesRemainder || 0) > 0 ? ` (termasuk sisa omzet ${money(totals.salesRemainder)})` : ""}`, totals.finalBrokenMoney ?? totals.brokenMoney ?? 0]
+          ["Uang Pecah Saat Ini (input manual)", totals.brokenMoneyCounted ?? totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0]
         ],
         details: [
           ["Jenis", "Kategori", "Nama", "Nominal", "Keterangan"],
