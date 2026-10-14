@@ -826,15 +826,22 @@ const firebaseConfig = {
       return `${n > 0 ? "+" : "-"}${money(Math.abs(n))}`;
     }
 
-    function getRecordFinalBrokenMoney(record) {
+    function getRecordCountedBrokenMoney(record) {
       const totals = record?.totals || {};
-      if (totals.finalBrokenMoney !== undefined && totals.finalBrokenMoney !== null) {
-        const finalValue = Number(totals.finalBrokenMoney);
-        return Number.isFinite(finalValue) ? finalValue : 0;
+      // Selisih harian membandingkan angka uang pecah yang benar-benar
+      // diinput/dihitung manual, bukan nilai akhir yang ditambah sisa omzet.
+      // Field brokenMoneyCounted menjadi field utama untuk record baru;
+      // brokenMoneyInitial/brokenMoney adalah kompatibilitas record lama.
+      const countedValue = totals.brokenMoneyCounted
+        ?? totals.brokenMoneyInitial
+        ?? totals.brokenMoney;
+      if (countedValue !== undefined && countedValue !== null) {
+        const value = Number(countedValue);
+        return Number.isFinite(value) ? value : 0;
       }
-      const initial = Number(totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0);
-      const remainder = Number(totals.salesRemainder ?? 0);
-      return (Number.isFinite(initial) ? initial : 0) + (Number.isFinite(remainder) ? remainder : 0);
+      // Kompatibilitas terakhir untuk data pembanding tersimpan dari versi lama.
+      const legacyFinal = Number(totals.finalBrokenMoney ?? 0);
+      return Number.isFinite(legacyFinal) ? legacyFinal : 0;
     }
 
     function numericInput(id) {
@@ -1091,7 +1098,7 @@ const firebaseConfig = {
           previousBrokenMoneyRecord = {
             branch,
             dateKey: savedTotals.previousBrokenMoneyDate,
-            totals: { finalBrokenMoney: Number(savedTotals.previousBrokenMoney) }
+            totals: { brokenMoneyCounted: Number(savedTotals.previousBrokenMoneyCounted ?? savedTotals.previousBrokenMoney) }
           };
         } else {
           handleFirebaseError(error, "Firestore previous broken-money lookup");
@@ -1115,6 +1122,7 @@ const firebaseConfig = {
           totals: {
             ...(currentRecord.totals || {}),
             previousBrokenMoney: totals.previousBrokenMoney,
+            previousBrokenMoneyCounted: totals.previousBrokenMoney,
             previousBrokenMoneyDate: totals.previousBrokenMoneyDate,
             hasPreviousBrokenMoney: totals.hasPreviousBrokenMoney,
             brokenMoneyDifference: totals.brokenMoneyDifference,
@@ -1161,7 +1169,7 @@ const firebaseConfig = {
       const brokenMoney = numericInput("brokenMoney");
       const hasPreviousBrokenMoney = Boolean(previousBrokenMoneyRecord);
       const previousBrokenMoney = hasPreviousBrokenMoney
-        ? getRecordFinalBrokenMoney(previousBrokenMoneyRecord)
+        ? getRecordCountedBrokenMoney(previousBrokenMoneyRecord)
         : null;
       const previousBrokenMoneyDate = hasPreviousBrokenMoney
         ? String(previousBrokenMoneyRecord.dateKey || "")
@@ -1267,13 +1275,13 @@ const firebaseConfig = {
         brokenDiffStatus.textContent = "Belum ada closing sebelumnya sebagai pembanding";
       } else if (totals.brokenMoneyDifference < 0) {
         brokenDiffStat.classList.add("danger");
-        brokenDiffStatus.textContent = `MINUS ${money(Math.abs(totals.brokenMoneyDifference))} • pembanding ${money(totals.previousBrokenMoney)} pada ${formatDateKey(totals.previousBrokenMoneyDate)}`;
+        brokenDiffStatus.textContent = `MINUS ${money(Math.abs(totals.brokenMoneyDifference))} • dibanding input uang pecah ${money(totals.previousBrokenMoney)} pada ${formatDateKey(totals.previousBrokenMoneyDate)}`;
       } else if (totals.brokenMoneyDifference > 0) {
         brokenDiffStat.classList.add("warning");
-        brokenDiffStatus.textContent = `PLUS ${money(totals.brokenMoneyDifference)} • pembanding ${money(totals.previousBrokenMoney)} pada ${formatDateKey(totals.previousBrokenMoneyDate)}`;
+        brokenDiffStatus.textContent = `PLUS ${money(totals.brokenMoneyDifference)} • dibanding input uang pecah ${money(totals.previousBrokenMoney)} pada ${formatDateKey(totals.previousBrokenMoneyDate)}`;
       } else {
         brokenDiffStat.classList.add("success");
-        brokenDiffStatus.textContent = `PAS • sama dengan ${money(totals.previousBrokenMoney)} pada ${formatDateKey(totals.previousBrokenMoneyDate)}`;
+        brokenDiffStatus.textContent = `PAS • sama dengan input uang pecah ${money(totals.previousBrokenMoney)} pada ${formatDateKey(totals.previousBrokenMoneyDate)}`;
       }
 
       $("differenceDisplay").textContent = signedMoney(totals.difference);
@@ -1475,7 +1483,9 @@ const firebaseConfig = {
           difference: totals.difference,
           brokenMoney: totals.brokenMoney,
           brokenMoneyInitial: totals.brokenMoney,
+          brokenMoneyCounted: totals.brokenMoney,
           previousBrokenMoney: totals.previousBrokenMoney,
+          previousBrokenMoneyCounted: totals.previousBrokenMoney,
           previousBrokenMoneyDate: totals.previousBrokenMoneyDate,
           hasPreviousBrokenMoney: totals.hasPreviousBrokenMoney,
           brokenMoneyDifference: totals.brokenMoneyDifference,
@@ -1581,7 +1591,7 @@ const firebaseConfig = {
         previousBrokenMoneyRecord = {
           branch: record.branch,
           dateKey: record.totals.previousBrokenMoneyDate,
-          totals: { finalBrokenMoney: Number(record.totals.previousBrokenMoney) }
+          totals: { brokenMoneyCounted: Number(record.totals.previousBrokenMoneyCounted ?? record.totals.previousBrokenMoney) }
         };
       }
       currentRecord = record;
@@ -1634,7 +1644,9 @@ const firebaseConfig = {
           difference: recalculated.difference,
           brokenMoney: recalculated.brokenMoney,
           brokenMoneyInitial: recalculated.brokenMoney,
+          brokenMoneyCounted: recalculated.brokenMoney,
           previousBrokenMoney: recalculated.previousBrokenMoney,
+          previousBrokenMoneyCounted: recalculated.previousBrokenMoney,
           previousBrokenMoneyDate: recalculated.previousBrokenMoneyDate,
           hasPreviousBrokenMoney: recalculated.hasPreviousBrokenMoney,
           brokenMoneyDifference: recalculated.brokenMoneyDifference,
