@@ -1927,19 +1927,30 @@ const firebaseConfig = {
         Number(row.amount || 0) !== 0 || String(row.name || "").trim() || String(row.note || "").trim()
       );
 
-      const paymentCash = Number(income.cash || 0);
-      const paymentQris = Number(income.qris || 0);
+      const paymentCashBase = Number(income.cash || 0);
+      const paymentQrisBase = Number(income.qris || 0);
       const paymentTransfer = Number(income.transfer || 0);
-      const totalPayments = paymentCash + paymentQris + paymentTransfer;
       const operationalTotal = operational.reduce((sum, row) => sum + Number(row.amount || 0), 0);
       const mealTotal = meals.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+      // Pada tabel A, pengeluaran dialokasikan ke metode pembayaran:
+      // - Pengeluaran operasional yang terdeteksi sebagai admin/BukuPay masuk QRIS.
+      // - Pengeluaran operasional lainnya dan seluruh makan/minum masuk Cash.
+      // Gunakan nama pengeluaran, sama seperti aturan aplikasi utama.
+      const qrisOperationalTotal = operational
+        .filter(row => isQrisExpenseName(row.name))
+        .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+      const cashOperationalTotal = operationalTotal - qrisOperationalTotal;
+      const paymentCash = paymentCashBase + cashOperationalTotal + mealTotal;
+      const paymentQris = paymentQrisBase + qrisOperationalTotal;
+      const totalPayments = paymentCash + paymentQris + paymentTransfer;
       const hasPreviousBrokenMoney = Boolean(totals.hasPreviousBrokenMoney);
       const brokenMoneyDifference = hasPreviousBrokenMoney
         ? Number(totals.brokenMoneyDifference || 0)
         : 0;
-      // Total Pemasukan pada bagian A mengikuti kebutuhan laporan ekspor:
-      // Cash + QRIS + Transfer + seluruh pengeluaran operasional + makan/minum.
-      const totalIncomeIncludingExpenses = totalPayments + operationalTotal + mealTotal;
+      // Baris pembayaran pada bagian A sudah mencakup alokasi pengeluaran:
+      // Cash + pengeluaran non-QRIS + seluruh makan/minum, QRIS + admin/BukuPay,
+      // dan Transfer. Jangan tambahkan pengeluaran lagi agar tidak dihitung ganda.
+      const totalIncomeIncludingExpenses = totalPayments;
       const reconciliationTotal = totalIncomeIncludingExpenses + brokenMoneyDifference;
       const totalSales = Number(totals.totalSales || 0);
       const finalDifference = reconciliationTotal - totalSales;
@@ -1996,8 +2007,7 @@ const firebaseConfig = {
         "3. Pembayaran Transfer", numberCell(paymentTransfer), String(income.transferNote || "")
       ], "payment");
       const totalIncomeRow = addRow([
-        // Nilai Total Pemasukan langsung dihitung dari seluruh komponen:
-        // Cash + QRIS + Transfer + Operasional + Makan/Minum.
+        // Total pembayaran sudah termasuk alokasi semua pengeluaran di baris Cash/QRIS.
         "Total Pemasukan", numberCell(totalIncomeIncludingExpenses), ""
       ], "total");
       addRow([], "blank");
@@ -2091,9 +2101,8 @@ const firebaseConfig = {
         ""
       ], "total");
 
-      // Bagian A menampilkan langsung hasil penjumlahan seluruh nominal:
-      // Cash + QRIS + Transfer + Operasional + Makan/Minum.
-      // Nilai dihitung dari data input agar total langsung terlihat saat file dibuka.
+      // Bagian A menampilkan nilai Cash, QRIS, dan Transfer yang sudah
+      // mencakup pengeluaran sesuai jenisnya. Tidak ada penambahan ganda.
       rows[totalIncomeRow - 1][1] = numberCell(totalIncomeIncludingExpenses);
 
       // Total Pengeluaran pada bagian B mencakup operasional + makan/minum.
