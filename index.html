@@ -142,6 +142,7 @@
     .section-title p { margin:0; font-size:11px; color:var(--muted); }
 
     .money-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top: 18px; }
+    .money-summary.three-col { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .stat {
       border:1px solid var(--line); background:var(--surface-soft); border-radius:14px; padding:14px;
       min-width:0;
@@ -273,6 +274,7 @@
       .form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .field.span-2 { grid-column:span 2; }
       .money-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .money-summary.three-col { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .hero-card { padding:20px; }
     }
     @media (max-width: 700px) {
@@ -362,6 +364,7 @@
       .form-grid, .history-tools { grid-template-columns:1fr; }
       .field.span-2 { grid-column:span 1; }
       .money-summary { grid-template-columns:1fr; }
+      .money-summary.three-col { grid-template-columns:1fr; }
       .card-body { padding:14px; }
       .card-header {
         padding:15px 14px;
@@ -511,7 +514,35 @@
           <article class="card">
             <div class="card-header">
               <div>
+                <h3>Rekonsiliasi</h3>
+                <p>Ringkasan pemasukan setelah dikoreksi berdasarkan selisih uang pecah.</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="money-summary three-col" style="margin-top:0;">
+                <div class="stat">
+                  <div class="label">Total Pemasukan (Cash + QRIS + Transfer)</div>
+                  <div id="reconciliationIncomeDisplay" class="value">Rp 0</div>
+                </div>
+                <div id="brokenMoneyDifferenceStat" class="stat warning">
+                  <div class="label">Selisih Uang Pecah</div>
+                  <div id="brokenMoneyDifferenceDisplay" class="value">—</div>
+                  <div id="brokenMoneyDifferenceStatus" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;">Belum ada pembanding</div>
+                </div>
+                <div class="stat primary">
+                  <div class="label">Total Akhir Rekonsiliasi</div>
+                  <div id="reconciliationTotalDisplay" class="value">Rp 0</div>
+                  <div style="display:block;margin-top:5px;color:var(--muted);font-size:10px;">Selisih minus mengurangi total; selisih plus menambah total.</div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
                 <h3>Rekap Akhir</h3>
+                <p>Bandingkan total akhir rekonsiliasi dengan penjualan, serta cek uang pecah saat ini.</p>
               </div>
             </div>
             <div class="card-body">
@@ -521,29 +552,25 @@
                   <input id="totalSales" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
                 </div>
                 <div class="field">
-                  <label for="brokenMoney">Uang Pecah Awal</label>
+                  <label for="brokenMoney">Uang Pecah yang Dihitung Hari Ini</label>
                   <input id="brokenMoney" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
-                </div>
-                <div class="field">
-                  <label for="salesRemainder">Tambahan Uang Pecah dari Omzet</label>
-                  <input id="salesRemainder" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" readonly />
                 </div>
               </div>
 
-              <div class="money-summary" style="margin-top:16px;">
-                <div class="stat"><div class="label">Total Pemasukan</div><div id="finalIncomeDisplay" class="value">Rp 0</div></div>
-                <div class="stat"><div class="label">Total Pengeluaran</div><div id="finalExpenseDisplay" class="value">Rp 0</div></div>
-                <div class="stat primary"><div class="label">Total Penjualan / Omzet</div><div id="finalSalesDisplay" class="value">Rp 0</div></div>
-                <div class="stat warning"><div class="label">Tambahan Uang Pecah dari Omzet</div><div id="salesRemainderDisplay" class="value">Rp 0</div></div>
-                <div class="stat"><div class="label">Uang Pecah Akhir</div><div id="finalBrokenMoneyDisplay" class="value">Rp 0</div></div>
-                <div class="stat"><div class="label">Uang Pecah Akhir Closing Sebelumnya</div><div id="previousBrokenMoneyDisplay" class="value">—</div><div id="previousBrokenMoneyDateDisplay" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;">Belum ada pembanding</div></div>
-                <div id="brokenMoneyDifferenceStat" class="stat warning"><div class="label">Selisih Uang Pecah</div><div id="brokenMoneyDifferenceDisplay" class="value">—</div><div id="brokenMoneyDifferenceStatus" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;">Belum ada pembanding</div></div>
-                <div class="stat success"><div class="label">Setoran QRIS</div><div id="qrisOwnerDepositDisplay" class="value">Rp 0</div></div>
-                <div class="stat success"><div class="label">Setoran Cash</div><div id="cashOwnerDepositDisplay" class="value">Rp 0</div></div>
+              <div class="money-summary three-col" style="margin-top:16px;">
+                <div class="stat primary">
+                  <div class="label">Total Penjualan / Omzet</div>
+                  <div id="finalSalesDisplay" class="value">Rp 0</div>
+                </div>
                 <div id="differenceStat" class="stat danger">
-                  <div class="label">Total Selisih</div>
+                  <div class="label">Selisih (Total Rekonsiliasi − Total Penjualan)</div>
                   <div id="differenceDisplay" class="value">Rp 0</div>
-                   <div id="differenceStatus" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;"></div>
+                  <div id="differenceStatus" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;"></div>
+                </div>
+                <div class="stat">
+                  <div class="label">Uang Pecah Saat Ini</div>
+                  <div id="finalBrokenMoneyDisplay" class="value">Rp 0</div>
+                  <div id="currentBrokenMoneyNote" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;">Termasuk sisa omzet jika ada.</div>
                 </div>
               </div>
 
@@ -1066,7 +1093,15 @@ const firebaseConfig = {
             previousBrokenMoney: totals.previousBrokenMoney,
             previousBrokenMoneyDate: totals.previousBrokenMoneyDate,
             hasPreviousBrokenMoney: totals.hasPreviousBrokenMoney,
-            brokenMoneyDifference: totals.brokenMoneyDifference
+            brokenMoneyDifference: totals.brokenMoneyDifference,
+            reconciliationTotal: totals.reconciliationTotal,
+            totalIncome: totals.totalIncome,
+            totalSales: totals.totalSales,
+            difference: totals.difference,
+            finalBrokenMoney: totals.finalBrokenMoney,
+            salesRemainder: totals.salesRemainder,
+            actualOwnerSettlement: totals.actualOwnerSettlement,
+            expectedOwnerSettlement: totals.expectedOwnerSettlement
           }
         };
       }
@@ -1121,14 +1156,15 @@ const firebaseConfig = {
       const salesRemainder = Math.max(0, totalSales - ownerWithdrawal);
       const finalBrokenMoney = brokenMoney + salesRemainder;
 
-      // Rekonsiliasi transparan:
-      // Selisih membandingkan total pemasukan aktual dengan total omzet.
-      // Uang yang tidak disetor karena pembulatan Setoran Cash sudah menjadi
-      // salesRemainder dan masuk ke Uang Pecah, sehingga TIDAK dihitung lagi
-      // sebagai selisih. Pengeluaran tetap hanya menjadi informasi.
+      // Rekonsiliasi:
+      // Selisih uang pecah bertanda minus jika uang pecah berkurang dan plus
+      // jika bertambah. Karena itu, nilai selisih bertanda ditambahkan ke
+      // total pemasukan agar kekurangan mengurangi dan kelebihan menambah total.
+      // Jika belum ada closing pembanding, total akhir sama dengan pemasukan.
+      const reconciliationTotal = totalIncome + (hasPreviousBrokenMoney ? brokenMoneyDifference : 0);
       const expectedOwnerSettlement = totalSales;
-      const actualOwnerSettlement = totalIncome;
-      const difference = actualOwnerSettlement - expectedOwnerSettlement;
+      const actualOwnerSettlement = reconciliationTotal;
+      const difference = reconciliationTotal - expectedOwnerSettlement;
 
       const operationalTotal = operationalRows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
       const mealTotal = mealRows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
@@ -1149,6 +1185,7 @@ const firebaseConfig = {
         previousBrokenMoneyDate,
         hasPreviousBrokenMoney,
         brokenMoneyDifference,
+        reconciliationTotal,
         salesRemainder,
         ownerWithdrawal,
         qrisOwnerDeposit,
@@ -1172,21 +1209,14 @@ const firebaseConfig = {
       $("totalIncomeDisplay").textContent = money(totals.totalIncome);
       $("operationalTotalDisplay").textContent = money(totals.operationalTotal);
       $("mealTotalDisplay").textContent = money(totals.mealTotal);
-      $("finalIncomeDisplay").textContent = money(totals.totalIncome);
-      $("finalExpenseDisplay").textContent = money(totals.totalExpenses);
+      $("reconciliationIncomeDisplay").textContent = money(totals.totalIncome);
+      $("reconciliationTotalDisplay").textContent = money(totals.reconciliationTotal);
       $("finalSalesDisplay").textContent = money(totals.totalSales);
-      setRupiahInputValue("salesRemainder", totals.salesRemainder);
-      $("salesRemainderDisplay").textContent = money(totals.salesRemainder);
       $("finalBrokenMoneyDisplay").textContent = money(totals.finalBrokenMoney);
-      $("qrisOwnerDepositDisplay").textContent = money(totals.qrisOwnerDeposit);
-      $("cashOwnerDepositDisplay").textContent = money(totals.cashOwnerDeposit);
+      $("currentBrokenMoneyNote").textContent = totals.salesRemainder > 0
+        ? `Termasuk sisa omzet ${money(totals.salesRemainder)}.`
+        : "Tidak ada tambahan sisa omzet.";
 
-      $("previousBrokenMoneyDisplay").textContent = totals.hasPreviousBrokenMoney
-        ? money(totals.previousBrokenMoney)
-        : "—";
-      $("previousBrokenMoneyDateDisplay").textContent = totals.hasPreviousBrokenMoney
-        ? `Closing ${formatDateKey(totals.previousBrokenMoneyDate)}`
-        : "Belum ada closing sebelumnya";
       $("brokenMoneyDifferenceDisplay").textContent = totals.hasPreviousBrokenMoney
         ? signedMoney(totals.brokenMoneyDifference)
         : "—";
@@ -1196,16 +1226,16 @@ const firebaseConfig = {
       brokenDiffStat.classList.remove("success", "warning", "danger");
       if (!totals.hasPreviousBrokenMoney) {
         brokenDiffStat.classList.add("warning");
-        brokenDiffStatus.textContent = "Tidak ada closing sebelumnya sebagai pembanding";
+        brokenDiffStatus.textContent = "Belum ada closing sebelumnya sebagai pembanding";
       } else if (totals.brokenMoneyDifference < 0) {
         brokenDiffStat.classList.add("danger");
-        brokenDiffStatus.textContent = `MINUS • kurang ${money(Math.abs(totals.brokenMoneyDifference))} dari closing sebelumnya`;
+        brokenDiffStatus.textContent = `MINUS ${money(Math.abs(totals.brokenMoneyDifference))} • pembanding ${money(totals.previousBrokenMoney)} pada ${formatDateKey(totals.previousBrokenMoneyDate)}`;
       } else if (totals.brokenMoneyDifference > 0) {
         brokenDiffStat.classList.add("warning");
-        brokenDiffStatus.textContent = `PLUS • lebih ${money(totals.brokenMoneyDifference)} dari closing sebelumnya`;
+        brokenDiffStatus.textContent = `PLUS ${money(totals.brokenMoneyDifference)} • pembanding ${money(totals.previousBrokenMoney)} pada ${formatDateKey(totals.previousBrokenMoneyDate)}`;
       } else {
         brokenDiffStat.classList.add("success");
-        brokenDiffStatus.textContent = "PAS • sama dengan uang pecah closing sebelumnya";
+        brokenDiffStatus.textContent = `PAS • sama dengan ${money(totals.previousBrokenMoney)} pada ${formatDateKey(totals.previousBrokenMoneyDate)}`;
       }
 
       $("differenceDisplay").textContent = signedMoney(totals.difference);
@@ -1216,13 +1246,13 @@ const firebaseConfig = {
 
       if (totals.difference > 0) {
         diffStat.classList.add("success");
-        diffStatus.textContent = "PLUS • total pemasukan lebih besar dari omzet";
+        diffStatus.textContent = "PLUS • total rekonsiliasi lebih besar dari penjualan";
       } else if (totals.difference < 0) {
         diffStat.classList.add("danger");
-        diffStatus.textContent = "MINUS • total pemasukan lebih kecil dari omzet";
+        diffStatus.textContent = "MINUS • total rekonsiliasi lebih kecil dari penjualan";
       } else {
         diffStat.classList.add("success");
-        diffStatus.textContent = "PAS • sesuai dengan omzet";
+        diffStatus.textContent = "PAS • total rekonsiliasi sesuai dengan penjualan";
       }
     }
 
@@ -1348,7 +1378,6 @@ const firebaseConfig = {
       $("incomeTransferNote").value = "";
       setRupiahInputValue("totalSales", "");
       setRupiahInputValue("brokenMoney", "");
-      setRupiahInputValue("salesRemainder", "");
       defaultFormRows();
       clearCurrentRecord();
       updateCalculations();
@@ -1372,7 +1401,7 @@ const firebaseConfig = {
       const monthKey = dateKey.slice(0, 7);
       const totals = computeTotals();
       return {
-        schemaVersion: 4,
+        schemaVersion: 5,
         dateKey,
         monthKey,
         branchId: sanitizeId(branch),
@@ -1398,6 +1427,7 @@ const firebaseConfig = {
           totalMeal: totals.mealTotal,
           totalExpenses: totals.totalExpenses,
           totalSales: totals.totalSales,
+          reconciliationTotal: totals.reconciliationTotal,
           difference: totals.difference,
           brokenMoney: totals.brokenMoney,
           brokenMoneyInitial: totals.brokenMoney,
@@ -1524,7 +1554,6 @@ const firebaseConfig = {
       $("incomeTransferNote").value = record.income?.transferNote || "";
       setRupiahInputValue("totalSales", record.totals?.totalSales || "");
       setRupiahInputValue("brokenMoney", record.totals?.brokenMoneyInitial ?? record.totals?.brokenMoney ?? "");
-      setRupiahInputValue("salesRemainder", record.totals?.salesRemainder ?? "");
       operationalRows.splice(0, operationalRows.length, ...(record.operationalExpenses || []).map((r, i) => ({ id:`op-${Date.now()}-${i}`, name:r.name || "", amount:Number(r.amount || 0), note:r.note || "" })));
       mealRows.splice(0, mealRows.length, ...(record.mealExpenses || []).map((r, i) => ({ id:`meal-${Date.now()}-${i}`, name:r.name || "", amount:Number(r.amount || 0), note:r.note || "" })));
       if (!operationalRows.length) operationalRows.push({ id:`op-${Date.now()}`, name:"", amount:0, note:"" });
@@ -1545,6 +1574,7 @@ const firebaseConfig = {
           totalMeal: recalculated.mealTotal,
           totalExpenses: recalculated.totalExpenses,
           totalSales: recalculated.totalSales,
+          reconciliationTotal: recalculated.reconciliationTotal,
           difference: recalculated.difference,
           brokenMoney: recalculated.brokenMoney,
           brokenMoneyInitial: recalculated.brokenMoney,
@@ -1722,22 +1752,15 @@ const firebaseConfig = {
           ["Total Makan/Minum", totals.totalMeal || 0],
           ["TOTAL PENGELUARAN", totals.totalExpenses || 0],
           [],
+          ["REKONSILIASI"],
+          ["Total Pemasukan (Cash + QRIS + Transfer)", totals.totalIncome || 0],
+          ["Selisih Uang Pecah", totals.hasPreviousBrokenMoney ? `${signedMoney(totals.brokenMoneyDifference ?? 0)}${totals.previousBrokenMoneyDate ? ` (pembanding ${formatDateKey(totals.previousBrokenMoneyDate)}: ${money(totals.previousBrokenMoney ?? 0)})` : ""}` : "Belum ada closing sebelumnya sebagai pembanding"],
+          ["Total Akhir Rekonsiliasi", totals.reconciliationTotal ?? totals.totalIncome ?? 0],
+          [],
           ["REKAP AKHIR"],
           ["Total Penjualan / Omzet", totals.totalSales || 0],
-          ["Uang Pecah Awal / Dihitung Hari Ini", totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0],
-          ["Uang Pecah Akhir Closing Sebelumnya", totals.hasPreviousBrokenMoney ? (totals.previousBrokenMoney ?? 0) : "Tidak ada data pembanding"],
-          ["Tanggal Closing Pembanding", totals.hasPreviousBrokenMoney ? formatDateKey(totals.previousBrokenMoneyDate) : "Tidak ada closing sebelumnya"],
-          ["Selisih Uang Pecah", totals.hasPreviousBrokenMoney ? signedMoney(totals.brokenMoneyDifference ?? 0) : "Tidak ada data pembanding"],
-          ["Status Selisih Uang Pecah", !totals.hasPreviousBrokenMoney ? "Tidak ada closing sebelumnya" : (totals.brokenMoneyDifference < 0 ? "MINUS - uang pecah berkurang" : (totals.brokenMoneyDifference > 0 ? "PLUS - uang pecah bertambah" : "PAS - nominal sama"))],
-          ["Tambahan Uang Pecah dari Omzet", totals.salesRemainder || 0],
-          ["Uang Pecah Akhir", totals.finalBrokenMoney ?? totals.brokenMoney ?? 0],
-          ["Setoran QRIS", totals.qrisOwnerDeposit ?? 0],
-          ["Setoran Cash", totals.cashOwnerDeposit ?? 0],
-          ["Setoran Owner", (totals.ownerWithdrawal ?? totals.totalSales ?? 0)],
-          ["Total Omzet / Setoran Seharusnya", totals.expectedOwnerSettlement ?? 0],
-          ["Total Terhitung untuk Rekonsiliasi", totals.actualOwnerSettlement ?? 0],
-          ["Total Selisih Rekonsiliasi", signedMoney(totals.difference || 0)],
-          ["Rumus Selisih", "(Cash + QRIS + Transfer) − Total Omzet"]
+          ["Selisih (Total Rekonsiliasi − Total Penjualan)", signedMoney(totals.difference || 0)],
+          [`Uang Pecah Saat Ini${Number(totals.salesRemainder || 0) > 0 ? ` (termasuk sisa omzet ${money(totals.salesRemainder)})` : ""}`, totals.finalBrokenMoney ?? totals.brokenMoney ?? 0]
         ],
         details: [
           ["Jenis", "Kategori", "Nama", "Nominal", "Keterangan"],
