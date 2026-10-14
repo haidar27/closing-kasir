@@ -1937,7 +1937,10 @@ const firebaseConfig = {
       const brokenMoneyDifference = hasPreviousBrokenMoney
         ? Number(totals.brokenMoneyDifference || 0)
         : 0;
-      const reconciliationTotal = totalPayments + brokenMoneyDifference;
+      // Total Pemasukan pada bagian A mengikuti kebutuhan laporan ekspor:
+      // Cash + QRIS + Transfer + seluruh pengeluaran operasional + makan/minum.
+      const totalIncomeIncludingExpenses = totalPayments + operationalTotal + mealTotal;
+      const reconciliationTotal = totalIncomeIncludingExpenses + brokenMoneyDifference;
       const totalSales = Number(totals.totalSales || 0);
       const finalDifference = reconciliationTotal - totalSales;
       const brokenMoneyCurrent = Number(
@@ -1993,7 +1996,9 @@ const firebaseConfig = {
         "3. Pembayaran Transfer", numberCell(paymentTransfer), String(income.transferNote || "")
       ], "payment");
       const totalIncomeRow = addRow([
-        "Total Pemasukan", formulaCell(`SUM(B${cashPaymentRow}:B${transferPaymentRow})`, totalPayments), ""
+        // Nilai Total Pemasukan langsung dihitung dari seluruh komponen:
+        // Cash + QRIS + Transfer + Operasional + Makan/Minum.
+        "Total Pemasukan", numberCell(totalIncomeIncludingExpenses), ""
       ], "total");
       addRow([], "blank");
 
@@ -2022,7 +2027,7 @@ const firebaseConfig = {
 
       addRow(["C. REKONSILIASI", "Nominal (Rp)", "Keterangan"], "headerReconciliation");
       const reconciliationIncomeRow = addRow([
-        "1. Total Pemasukan", formulaCell(`B${totalIncomeRow}`, totalPayments), ""
+        "1. Total Pemasukan", formulaCell(`B${totalIncomeRow}`, totalIncomeIncludingExpenses), ""
       ], "data");
       const brokenDifferenceRow = addRow([
         "2. Selisih Uang Pecah", numberCell(brokenMoneyDifference), ""
@@ -2085,6 +2090,11 @@ const firebaseConfig = {
         formulaCell(`SUM(B${mealsFirstRow}:B${mealsLastRow})`, mealTotal),
         ""
       ], "total");
+
+      // Bagian A menampilkan langsung hasil penjumlahan seluruh nominal:
+      // Cash + QRIS + Transfer + Operasional + Makan/Minum.
+      // Nilai dihitung dari data input agar total langsung terlihat saat file dibuka.
+      rows[totalIncomeRow - 1][1] = numberCell(totalIncomeIncludingExpenses);
 
       // Total Pengeluaran pada bagian B mencakup operasional + makan/minum.
       // Bagian D tetap menampilkan subtotal makan/minum secara terpisah.
