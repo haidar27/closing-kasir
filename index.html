@@ -15,7 +15,7 @@
   <title>Closing Kasir • Realtime</title>
 
   <!-- Export libraries -->
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
   <script src="https://unpkg.com/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
   <script src="https://unpkg.com/jspdf-autotable@5.0.8/dist/jspdf.plugin.autotable.min.js"></script>
 
@@ -1845,9 +1845,15 @@ const firebaseConfig = {
     }
 
     function formatExportBase(record) {
-      const [y,m,d] = record.dateKey.split("-").map(Number);
-      const dateName = String(d).padStart(2,"0");
-      return `closing kasir ${record.branch}, ${dateName} ${monthNames[m-1]} ${y}`.replace(/[\\/:*?"<>|]/g, "-");
+      const [y, m, d] = String(record.dateKey || localDateKey()).split("-").map(Number);
+      const dateName = `${String(d).padStart(2, "0")}-${String(m).padStart(2, "0")}-${y}`;
+      const branchName = String(record.branch || "CABANG")
+        .trim()
+        .toLocaleUpperCase("id-ID")
+        .replace(/[\\/:*?"<>|]/g, "-")
+        .replace(/\s+/g, " ");
+      // Slash tidak digunakan dalam nama file karena diperlakukan sebagai pemisah folder.
+      return `closing kasir ${branchName} - ${dateName}`;
     }
 
     function buildExportRows(record) {
@@ -1911,28 +1917,252 @@ const firebaseConfig = {
       };
     }
 
+    function buildExcelReport(record) {
+      const totals = record.totals || {};
+      const income = record.income || {};
+      const operational = (record.operationalExpenses || []).filter(row =>
+        Number(row.amount || 0) !== 0 || String(row.name || "").trim() || String(row.note || "").trim()
+      );
+      const meals = (record.mealExpenses || []).filter(row =>
+        Number(row.amount || 0) !== 0 || String(row.name || "").trim() || String(row.note || "").trim()
+      );
+
+      const paymentCash = Number(income.cash || 0);
+      const paymentQris = Number(income.qris || 0);
+      const paymentTransfer = Number(income.transfer || 0);
+      const totalPayments = paymentCash + paymentQris + paymentTransfer;
+      const operationalTotal = operational.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+      const mealTotal = meals.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+      const brokenMoneyDifference = totals.hasPreviousBrokenMoney
+        ? Number(totals.brokenMoneyDifference || 0)
+        : 0;
+      const reconciliationTotal = totalPayments + brokenMoneyDifference;
+      const totalSales = Number(totals.totalSales || 0);
+      const finalDifference = reconciliationTotal - totalSales;
+      const brokenMoneyCurrent = Number(
+        totals.brokenMoneyCounted ?? totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0
+      );
+      const dailyCash = paymentCash - operationalTotal + brokenMoneyDifference;
+      const dailyQris = paymentQris;
+      const dailyTransfer = paymentTransfer;
+      const dailyRevenue = dailyCash + dailyQris + dailyTransfer;
+      const netRevenue = dailyRevenue - mealTotal;
+
+      const rows = [];
+      const rowTypes = [];
+      const signedCells = new Set();
+      const addRow = (values, type = "data") => {
+        rows.push(values);
+        rowTypes.push(type);
+        return rows.length; // Excel row number (1-based)
+      };
+      const numberCell = value => ({ t: "n", v: Number.isFinite(Number(value)) ? Number(value) : 0 });
+      const formulaCell = (formula, cachedValue) => ({
+        t: "n",
+        f: formula,
+        v: Number.isFinite(Number(cachedValue)) ? Number(cachedValue) : 0
+      });
+
+      addRow(["LAPORAN REKAPITULASI KASIR ABBA BENTO", "", ""], "title");
+      addRow(["Tanggal:", formatDateKey(record.dateKey), ""], "meta");
+      addRow(["Cabang:", String(record.branch || ""), ""], "meta");
+      addRow(["Nama Kasir:", String(record.cashierName || ""), ""], "meta");
+      addRow(["Nama Supervisor:", String(record.supervisorName || ""), ""], "meta");
+      addRow([], "blank");
+
+      const incomeHeaderRow = addRow(["A. Pemasukan", "Nominal (Rp)", "Keterangan"], "header");
+      const cashPaymentRow = addRow(["Pembayaran Cash", numberCell(paymentCash), String(income.cashNote || "")], "data");
+      const qrisPaymentRow = addRow(["Pembayaran QRIS", numberCell(paymentQris), String(income.qrisNote || "")], "data");
+      const transferPaymentRow = addRow(["Pembayaran Transfer", numberCell(paymentTransfer), String(income.transferNote || "")], "data");
+      const totalIncomeRow = addRow(["Total Pemasukan", formulaCell(`SUM(B${cashPaymentRow}:B${transferPaymentRow})`, totalPayments), ""], "total");
+      addRow([], "blank");
+
+      const expensesHeaderRow = addRow(["B. Pengeluaran", "Nominal (Rp)", "Keterangan"], "header");
+      const operationalFirstRow = rows.length + 1;
+      if (operational.length) {
+        operational.forEach(row => addRow([
+          String(row.name || "Pengeluaran operasional"),
+          numberCell(row.amount || 0),
+          String(row.note || "")
+        ], "data"));
+      } else {
+        addRow(["Tidak ada pengeluaran operasional", numberCell(0), ""], "data");
+      }
+      const operationalLastRow = rows.length;
+      const operationalTotalRow = addRow([
+        "Total Pengeluaran",
+        formulaCell(`SUM(B${operationalFirstRow}:B${operationalLastRow})`, operationalTotal),
+        ""
+      ], "total");
+      addRow([], "blank");
+
+      const reconciliationHeaderRow = addRow(["C. Rekonsiliasi", "Nominal (Rp)", "Keterangan"], "header");
+      const reconciliationIncomeRow = addRow([
+        "Total Pemasukan",
+        formulaCell(`B${totalIncomeRow}`, totalPayments),
+        "Total pembayaran cash + QRIS + transfer"
+      ], "data");
+      const brokenDifferenceNote = totals.hasPreviousBrokenMoney
+        ? `Pembanding ${formatDateKey(totals.previousBrokenMoneyDate)}: ${money(totals.previousBrokenMoney || 0)}`
+        : "Belum ada closing sebelumnya sebagai pembanding";
+      const brokenDifferenceRow = addRow([
+        "Selisih Uang Pecah",
+        numberCell(brokenMoneyDifference),
+        brokenDifferenceNote
+      ], "data");
+      signedCells.add(`B${brokenDifferenceRow}`);
+      const reconciliationTotalRow = addRow([
+        "Total",
+        formulaCell(`SUM(B${reconciliationIncomeRow}:B${brokenDifferenceRow})`, reconciliationTotal),
+        "Total pemasukan + selisih uang pecah"
+      ], "total");
+      const totalSalesRow = addRow(["Total Penjualan", numberCell(totalSales), "Omzet harian"], "data");
+      const finalDifferenceRow = addRow([
+        "Selisih",
+        formulaCell(`B${reconciliationTotalRow}-B${totalSalesRow}`, finalDifference),
+        "Total rekonsiliasi - total penjualan"
+      ], "data");
+      signedCells.add(`B${finalDifferenceRow}`);
+      addRow(["Uang Pecah Saat Ini", numberCell(brokenMoneyCurrent), "Nominal input manual"], "data");
+      addRow([], "blank");
+
+      const dailyRevenueRow = addRow([
+        "Pendapatan Harian",
+        formulaCell("", dailyRevenue),
+        "Jumlah Cash + QRIS + Transfer pada bagian Pendapatan Harian"
+      ], "summary");
+      const dailyCashRow = addRow([
+        "Cash",
+        formulaCell(`B${cashPaymentRow}-B${operationalTotalRow}+B${brokenDifferenceRow}`, dailyCash),
+        "Pembayaran cash - total pengeluaran + selisih uang pecah"
+      ], "data");
+      const dailyQrisRow = addRow([
+        "Qris",
+        formulaCell(`B${qrisPaymentRow}`, dailyQris),
+        "Mengacu pada pembayaran QRIS di bagian Pemasukan"
+      ], "data");
+      const dailyTransferRow = addRow([
+        "Transfer",
+        formulaCell(`B${transferPaymentRow}`, dailyTransfer),
+        "Mengacu pada pembayaran Transfer di bagian Pemasukan"
+      ], "data");
+      rows[dailyRevenueRow - 1][1] = formulaCell(`SUM(B${dailyCashRow}:B${dailyTransferRow})`, dailyRevenue);
+      addRow([], "blank");
+
+      const mealsHeaderRow = addRow(["D. Pengeluaran Makanan/Minuman", "Nominal (Rp)", "Keterangan"], "header");
+      const mealsFirstRow = rows.length + 1;
+      if (meals.length) {
+        meals.forEach(row => addRow([
+          String(row.name || "Pengeluaran makan/minum"),
+          numberCell(row.amount || 0),
+          String(row.note || "")
+        ], "data"));
+      } else {
+        addRow(["Tidak ada pengeluaran makanan/minuman", numberCell(0), ""], "data");
+      }
+      const mealsLastRow = rows.length;
+      const mealsTotalRow = addRow([
+        "Total Pengeluaran Makanan/Minuman",
+        formulaCell(`SUM(B${mealsFirstRow}:B${mealsLastRow})`, mealTotal),
+        ""
+      ], "total");
+      addRow([], "blank");
+      const netRevenueRow = addRow([
+        "E. Net Revenue",
+        formulaCell(`B${dailyRevenueRow}-B${mealsTotalRow}`, netRevenue),
+        "Pendapatan Harian - total pengeluaran makanan/minuman"
+      ], "summary");
+
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws["!merges"] = [XLSX.utils.decode_range("A1:C1")];
+      ws["!cols"] = [{ wch: 39 }, { wch: 22 }, { wch: 62 }];
+      ws["!rows"] = rows.map((_, index) => {
+        const type = rowTypes[index];
+        if (type === "title") return { hpt: 30 };
+        if (type === "blank") return { hpt: 9 };
+        if (type === "header") return { hpt: 24 };
+        if (type === "meta") return { hpt: 19 };
+        return { hpt: type === "data" ? 23 : 25 };
+      });
+      ws["!margins"] = { left: 0.3, right: 0.3, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 };
+      ws["!pageSetup"] = { orientation: "portrait", paperSize: 9, fitToWidth: 1, fitToHeight: 0 };
+      ws["!printOptions"] = { horizontalCentered: true };
+
+      const thinBorder = {
+        top: { style: "thin", color: { rgb: "CBD5E1" } },
+        bottom: { style: "thin", color: { rgb: "CBD5E1" } },
+        left: { style: "thin", color: { rgb: "CBD5E1" } },
+        right: { style: "thin", color: { rgb: "CBD5E1" } }
+      };
+      const currencyFormat = '"Rp" #,##0;[Red]"-Rp" #,##0;"Rp" 0';
+      const signedCurrencyFormat = '"+Rp" #,##0;"-Rp" #,##0;"Rp" 0';
+      const defaultFont = { name: "Aptos", sz: 10, color: { rgb: "233044" } };
+
+      for (let r = 0; r < rows.length; r++) {
+        const type = rowTypes[r];
+        for (let c = 0; c < 3; c++) {
+          const address = XLSX.utils.encode_cell({ r, c });
+          if (!ws[address]) ws[address] = { t: "s", v: "" };
+          const cell = ws[address];
+          const style = {
+            font: { ...defaultFont },
+            alignment: {
+              vertical: "center",
+              horizontal: c === 1 ? "right" : "left",
+              wrapText: true
+            }
+          };
+
+          if (type === "title") {
+            style.font = { name: "Aptos Display", sz: 16, bold: true, color: { rgb: "17324D" } };
+            style.alignment = { horizontal: "center", vertical: "center" };
+          } else if (type === "meta") {
+            if (c === 0) style.font = { ...defaultFont, bold: true };
+            style.alignment = { horizontal: "left", vertical: "center" };
+          } else if (type === "header") {
+            style.fill = { patternType: "solid", fgColor: { rgb: "17324D" } };
+            style.font = { name: "Aptos", sz: 10, bold: true, color: { rgb: "FFFFFF" } };
+            style.alignment = { horizontal: c === 0 ? "left" : "center", vertical: "center", wrapText: true };
+            style.border = thinBorder;
+          } else if (type === "data" || type === "total" || type === "summary") {
+            style.border = thinBorder;
+            if (type === "total") {
+              style.fill = { patternType: "solid", fgColor: { rgb: "DCEFEA" } };
+              style.font = { ...defaultFont, bold: true };
+            } else if (type === "summary") {
+              style.fill = { patternType: "solid", fgColor: { rgb: "C7E7DE" } };
+              style.font = { ...defaultFont, bold: true, color: { rgb: "17324D" } };
+            }
+          }
+          cell.s = style;
+
+          if (cell.t === "n" || (cell.f && typeof cell.v === "number")) {
+            cell.z = signedCells.has(address) ? signedCurrencyFormat : currencyFormat;
+            style.alignment = { horizontal: "right", vertical: "center" };
+          }
+        }
+      }
+
+      // Formula pada workbook akan dihitung ulang ketika dibuka di Excel/LibreOffice.
+      const wb = XLSX.utils.book_new();
+      wb.Workbook = wb.Workbook || {};
+      wb.Workbook.CalcPr = { calcMode: "auto", fullCalcOnLoad: true, forceFullCalc: true };
+      XLSX.utils.book_append_sheet(wb, ws, "Laporan Kasir");
+      return wb;
+    }
+
     function exportExcel() {
       const record = currentRecord || collectPayload();
       if (!record?.dateKey || !record?.branch) { showToast("Data closing belum siap untuk diekspor.", "warn"); return; }
       if (!window.XLSX) { showToast("Library Excel belum termuat. Coba refresh halaman.", "error"); return; }
-      const rows = buildExportRows(record);
-      const excelSummary = rows.summary.map(row => {
-        if (row.length >= 2 && typeof row[1] === "number") return [row[0], money(row[1]), ...row.slice(2)];
-        return row;
-      });
-      const excelDetails = rows.details.map((row, index) => {
-        if (index === 0) return row;
-        return [row[0], row[1], row[2], money(row[3]), row[4]];
-      });
-      const wb = XLSX.utils.book_new();
-      const ws1 = XLSX.utils.aoa_to_sheet(excelSummary);
-      const ws2 = XLSX.utils.aoa_to_sheet(excelDetails);
-      ws1["!cols"] = [{wch:34}, {wch:30}, {wch:18}, {wch:55}];
-      ws2["!cols"] = [{wch:16}, {wch:24}, {wch:28}, {wch:18}, {wch:65}];
-      XLSX.utils.book_append_sheet(wb, ws1, "Closing");
-      XLSX.utils.book_append_sheet(wb, ws2, "Detail");
-      XLSX.writeFile(wb, `${formatExportBase(record)}.xlsx`, { compression: true });
-      showToast("File Excel berhasil dibuat.", "success");
+      try {
+        const wb = buildExcelReport(record);
+        XLSX.writeFile(wb, `${formatExportBase(record)}.xlsx`, { compression: true });
+        showToast("Laporan Excel berhasil dibuat.", "success");
+      } catch (error) {
+        console.error("Excel export error", error);
+        showToast(`Gagal membuat Excel: ${error.message || "periksa data laporan"}`, "error", 5000);
+      }
     }
 
     function exportPdf() {
