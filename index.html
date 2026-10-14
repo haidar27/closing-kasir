@@ -2050,7 +2050,9 @@ const firebaseConfig = {
       ], "dailyMain");
       const dailyCashRow = addRow([
         "1. Cash  (Setor Tunai di Bank)",
-        formulaCell(`B${cashPaymentRow}-B${operationalTotalRow}+B${brokenDifferenceRow}`, dailyCash),
+        // Pendapatan Harian mengurangi operasional di sini; biaya makan/minum
+        // dikurangi satu kali lagi pada rumus Net Revenue di bagian E.
+        formulaCell(`B${cashPaymentRow}-SUM(B${operationalFirstRow}:B${operationalLastRow})+B${brokenDifferenceRow}`, dailyCash),
         ""
       ], "dailySub");
       const dailyQrisRow = addRow([
@@ -2083,6 +2085,13 @@ const firebaseConfig = {
         formulaCell(`SUM(B${mealsFirstRow}:B${mealsLastRow})`, mealTotal),
         ""
       ], "total");
+
+      // Total Pengeluaran pada bagian B mencakup operasional + makan/minum.
+      // Bagian D tetap menampilkan subtotal makan/minum secara terpisah.
+      rows[operationalTotalRow - 1][1] = formulaCell(
+        `SUM(B${operationalFirstRow}:B${operationalLastRow})+B${mealsTotalRow}`,
+        operationalTotal + mealTotal
+      );
       addRow([], "blank");
       addRow([
         "E. Net Revenue",
