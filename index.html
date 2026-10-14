@@ -1933,7 +1933,8 @@ const firebaseConfig = {
       const totalPayments = paymentCash + paymentQris + paymentTransfer;
       const operationalTotal = operational.reduce((sum, row) => sum + Number(row.amount || 0), 0);
       const mealTotal = meals.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-      const brokenMoneyDifference = totals.hasPreviousBrokenMoney
+      const hasPreviousBrokenMoney = Boolean(totals.hasPreviousBrokenMoney);
+      const brokenMoneyDifference = hasPreviousBrokenMoney
         ? Number(totals.brokenMoneyDifference || 0)
         : 0;
       const reconciliationTotal = totalPayments + brokenMoneyDifference;
@@ -1954,39 +1955,62 @@ const firebaseConfig = {
       const addRow = (values, type = "data") => {
         rows.push(values);
         rowTypes.push(type);
-        return rows.length; // Excel row number (1-based)
+        return rows.length; // Nomor baris Excel (mulai dari 1).
       };
-      const numberCell = value => ({ t: "n", v: Number.isFinite(Number(value)) ? Number(value) : 0 });
+      const numberCell = value => ({
+        t: "n",
+        v: Number.isFinite(Number(value)) ? Number(value) : 0
+      });
       const formulaCell = (formula, cachedValue) => ({
         t: "n",
         f: formula,
         v: Number.isFinite(Number(cachedValue)) ? Number(cachedValue) : 0
       });
+      const amountOrBlank = value => Number(value || 0) !== 0 ? numberCell(value) : "";
 
-      addRow(["LAPORAN REKAPITULASI KASIR ABBA BENTO", "", ""], "title");
-      addRow(["Tanggal:", formatDateKey(record.dateKey), ""], "meta");
-      addRow(["Cabang:", String(record.branch || ""), ""], "meta");
-      addRow(["Nama Kasir:", String(record.cashierName || ""), ""], "meta");
-      addRow(["Nama Supervisor:", String(record.supervisorName || ""), ""], "meta");
+      // Judul dan identitas mengikuti posisi serta tampilan file contoh.
+      const dateParts = String(record.dateKey || "").split("-").map(Number);
+      const reportDate = dateParts.length === 3 && dateParts.every(Number.isFinite)
+        ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`
+        : formatDateKey(record.dateKey);
+
+      addRow(["LAPORAN REKAPITULASI KASIR ABBA BENTO", "", ""], "title"); // Baris 1
+      addRow([], "blank");                                                    // Baris 2
+      addRow(["Tanggal", `: ${reportDate}`, ""], "meta");                    // Baris 3
+      addRow(["Cabang", `: ${String(record.branch || "")}`, ""], "meta");    // Baris 4
+      addRow(["Nama Kasir", `: ${String(record.cashierName || "")}`, ""], "meta");
+      addRow(["Nama Supervisor", `: ${String(record.supervisorName || "")}`, ""], "meta");
+      addRow([], "blank");                                                    // Baris 7
+
+      addRow(["A. Pemasukan", "Nominal (Rp)", "Keterangan"], "headerIncome");
+      const cashPaymentRow = addRow([
+        "1. Pembayaran Cash", numberCell(paymentCash), String(income.cashNote || "")
+      ], "payment");
+      const qrisPaymentRow = addRow([
+        "2. Pembayaran QRIS", numberCell(paymentQris), String(income.qrisNote || "")
+      ], "payment");
+      const transferPaymentRow = addRow([
+        "3. Pembayaran Transfer", numberCell(paymentTransfer), String(income.transferNote || "")
+      ], "payment");
+      const totalIncomeRow = addRow([
+        "Total Pemasukan", formulaCell(`SUM(B${cashPaymentRow}:B${transferPaymentRow})`, totalPayments), ""
+      ], "total");
       addRow([], "blank");
 
-      const incomeHeaderRow = addRow(["A. Pemasukan", "Nominal (Rp)", "Keterangan"], "header");
-      const cashPaymentRow = addRow(["Pembayaran Cash", numberCell(paymentCash), String(income.cashNote || "")], "data");
-      const qrisPaymentRow = addRow(["Pembayaran QRIS", numberCell(paymentQris), String(income.qrisNote || "")], "data");
-      const transferPaymentRow = addRow(["Pembayaran Transfer", numberCell(paymentTransfer), String(income.transferNote || "")], "data");
-      const totalIncomeRow = addRow(["Total Pemasukan", formulaCell(`SUM(B${cashPaymentRow}:B${transferPaymentRow})`, totalPayments), ""], "total");
-      addRow([], "blank");
-
-      const expensesHeaderRow = addRow(["B. Pengeluaran", "Nominal (Rp)", "Keterangan"], "header");
+      addRow(["B. PENGELUARAN", "Nominal (Rp)", "Keterangan"], "headerExpense");
+      const operationalSlots = Math.max(6, operational.length);
       const operationalFirstRow = rows.length + 1;
-      if (operational.length) {
-        operational.forEach(row => addRow([
-          String(row.name || "Pengeluaran operasional"),
-          numberCell(row.amount || 0),
-          String(row.note || "")
-        ], "data"));
-      } else {
-        addRow(["Tidak ada pengeluaran operasional", numberCell(0), ""], "data");
+      for (let i = 0; i < operationalSlots; i++) {
+        const expense = operational[i];
+        if (expense) {
+          addRow([
+            String(expense.name || ""),
+            amountOrBlank(expense.amount),
+            String(expense.note || "")
+          ], "expenseInput");
+        } else {
+          addRow(["", "", ""], "expenseInput");
+        }
       }
       const operationalLastRow = rows.length;
       const operationalTotalRow = addRow([
@@ -1996,107 +2020,110 @@ const firebaseConfig = {
       ], "total");
       addRow([], "blank");
 
-      const reconciliationHeaderRow = addRow(["C. Rekonsiliasi", "Nominal (Rp)", "Keterangan"], "header");
+      addRow(["C. REKONSILIASI", "Nominal (Rp)", "Keterangan"], "headerReconciliation");
       const reconciliationIncomeRow = addRow([
-        "Total Pemasukan",
-        formulaCell(`B${totalIncomeRow}`, totalPayments),
-        "Total pembayaran cash + QRIS + transfer"
+        "1. Total Pemasukan", formulaCell(`B${totalIncomeRow}`, totalPayments), ""
       ], "data");
-      const brokenDifferenceNote = totals.hasPreviousBrokenMoney
-        ? `Pembanding ${formatDateKey(totals.previousBrokenMoneyDate)}: ${money(totals.previousBrokenMoney || 0)}`
-        : "Belum ada closing sebelumnya sebagai pembanding";
       const brokenDifferenceRow = addRow([
-        "Selisih Uang Pecah",
-        numberCell(brokenMoneyDifference),
-        brokenDifferenceNote
+        "2. Selisih Uang Pecah", numberCell(brokenMoneyDifference), ""
       ], "data");
       signedCells.add(`B${brokenDifferenceRow}`);
       const reconciliationTotalRow = addRow([
-        "Total",
-        formulaCell(`SUM(B${reconciliationIncomeRow}:B${brokenDifferenceRow})`, reconciliationTotal),
-        "Total pemasukan + selisih uang pecah"
+        "Total", formulaCell(`B${reconciliationIncomeRow}+B${brokenDifferenceRow}`, reconciliationTotal), ""
       ], "total");
-      const totalSalesRow = addRow(["Total Penjualan", numberCell(totalSales), "Omzet harian"], "data");
+      addRow([], "blank");
+
+      const totalSalesRow = addRow([
+        "Total Penjualan", numberCell(totalSales), ""
+      ], "sales");
       const finalDifferenceRow = addRow([
-        "Selisih",
-        formulaCell(`B${reconciliationTotalRow}-B${totalSalesRow}`, finalDifference),
-        "Total rekonsiliasi - total penjualan"
-      ], "data");
+        "Selisih (Lebih/Kurang)", formulaCell(`B${reconciliationTotalRow}-B${totalSalesRow}`, finalDifference), ""
+      ], "difference");
       signedCells.add(`B${finalDifferenceRow}`);
-      addRow(["Uang Pecah Saat Ini", numberCell(brokenMoneyCurrent), "Nominal input manual"], "data");
+      addRow([
+        "Uang Pecah Saat ini", numberCell(brokenMoneyCurrent), ""
+      ], "brokenMoney");
       addRow([], "blank");
 
       const dailyRevenueRow = addRow([
-        "Pendapatan Harian",
-        formulaCell("", dailyRevenue),
-        "Jumlah Cash + QRIS + Transfer pada bagian Pendapatan Harian"
-      ], "summary");
+        "Pendapatan harian", formulaCell("", dailyRevenue), ""
+      ], "dailyMain");
       const dailyCashRow = addRow([
-        "Cash",
+        "1. Cash  (Setor Tunai di Bank)",
         formulaCell(`B${cashPaymentRow}-B${operationalTotalRow}+B${brokenDifferenceRow}`, dailyCash),
-        "Pembayaran cash - total pengeluaran + selisih uang pecah"
-      ], "data");
+        ""
+      ], "dailySub");
       const dailyQrisRow = addRow([
-        "Qris",
-        formulaCell(`B${qrisPaymentRow}`, dailyQris),
-        "Mengacu pada pembayaran QRIS di bagian Pemasukan"
-      ], "data");
+        "2. Qris", formulaCell(`B${qrisPaymentRow}`, dailyQris), ""
+      ], "dailySub");
       const dailyTransferRow = addRow([
-        "Transfer",
-        formulaCell(`B${transferPaymentRow}`, dailyTransfer),
-        "Mengacu pada pembayaran Transfer di bagian Pemasukan"
-      ], "data");
+        "3. Transfer", formulaCell(`B${transferPaymentRow}`, dailyTransfer), ""
+      ], "dailySub");
       rows[dailyRevenueRow - 1][1] = formulaCell(`SUM(B${dailyCashRow}:B${dailyTransferRow})`, dailyRevenue);
       addRow([], "blank");
 
-      const mealsHeaderRow = addRow(["D. Pengeluaran Makanan/Minuman", "Nominal (Rp)", "Keterangan"], "header");
+      addRow(["D. PENGELUARAN MAKANAN/MINUMAN", "Nominal (Rp)", "Keterangan"], "headerMeals");
+      const mealsSlots = Math.max(6, meals.length);
       const mealsFirstRow = rows.length + 1;
-      if (meals.length) {
-        meals.forEach(row => addRow([
-          String(row.name || "Pengeluaran makan/minum"),
-          numberCell(row.amount || 0),
-          String(row.note || "")
-        ], "data"));
-      } else {
-        addRow(["Tidak ada pengeluaran makanan/minuman", numberCell(0), ""], "data");
+      for (let i = 0; i < mealsSlots; i++) {
+        const expense = meals[i];
+        if (expense) {
+          addRow([
+            String(expense.name || ""),
+            amountOrBlank(expense.amount),
+            String(expense.note || "")
+          ], "mealInput");
+        } else {
+          addRow(["", "", ""], "mealInput");
+        }
       }
       const mealsLastRow = rows.length;
       const mealsTotalRow = addRow([
-        "Total Pengeluaran Makanan/Minuman",
+        "Total",
         formulaCell(`SUM(B${mealsFirstRow}:B${mealsLastRow})`, mealTotal),
         ""
       ], "total");
       addRow([], "blank");
-      const netRevenueRow = addRow([
+      addRow([
         "E. Net Revenue",
         formulaCell(`B${dailyRevenueRow}-B${mealsTotalRow}`, netRevenue),
-        "Pendapatan Harian - total pengeluaran makanan/minuman"
-      ], "summary");
+        "Otomatis terhitung"
+      ], "netRevenue");
 
       const ws = XLSX.utils.aoa_to_sheet(rows);
       ws["!merges"] = [XLSX.utils.decode_range("A1:C1")];
-      ws["!cols"] = [{ wch: 39 }, { wch: 22 }, { wch: 62 }];
+      // Proporsi lebar kolom mengikuti template: nama/keterangan panjang,
+      // dengan kolom nominal yang lebih ramping.
+      ws["!cols"] = [{ wch: 51 }, { wch: 21 }, { wch: 118 }];
       ws["!rows"] = rows.map((_, index) => {
         const type = rowTypes[index];
-        if (type === "title") return { hpt: 30 };
+        if (type === "title") return { hpt: 22 };
         if (type === "blank") return { hpt: 9 };
-        if (type === "header") return { hpt: 24 };
+        if (type.startsWith("header")) return { hpt: 21 };
         if (type === "meta") return { hpt: 19 };
-        return { hpt: type === "data" ? 23 : 25 };
+        if (type === "dailyMain" || type === "netRevenue") return { hpt: 24 };
+        return { hpt: 20 };
       });
-      ws["!margins"] = { left: 0.3, right: 0.3, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 };
-      ws["!pageSetup"] = { orientation: "portrait", paperSize: 9, fitToWidth: 1, fitToHeight: 0 };
+      ws["!margins"] = { left: 0.25, right: 0.25, top: 0.35, bottom: 0.35, header: 0.15, footer: 0.15 };
+      ws["!pageSetup"] = { orientation: "portrait", paperSize: 9, fitToWidth: 1, fitToHeight: 1 };
       ws["!printOptions"] = { horizontalCentered: true };
+      ws["!fitToPage"] = true;
 
-      const thinBorder = {
-        top: { style: "thin", color: { rgb: "CBD5E1" } },
-        bottom: { style: "thin", color: { rgb: "CBD5E1" } },
-        left: { style: "thin", color: { rgb: "CBD5E1" } },
-        right: { style: "thin", color: { rgb: "CBD5E1" } }
+      const blackBorder = {
+        top: { style: "medium", color: { rgb: "000000" } },
+        bottom: { style: "medium", color: { rgb: "000000" } },
+        left: { style: "medium", color: { rgb: "000000" } },
+        right: { style: "medium", color: { rgb: "000000" } }
       };
-      const currencyFormat = '"Rp" #,##0;[Red]"-Rp" #,##0;"Rp" 0';
-      const signedCurrencyFormat = '"+Rp" #,##0;"-Rp" #,##0;"Rp" 0';
-      const defaultFont = { name: "Aptos", sz: 10, color: { rgb: "233044" } };
+      const standardNumberFormat = '#,##0;-#,##0;-';
+      const signedNumberFormat = '+#,##0;-#,##0;;';
+      const defaultFont = { name: "Arial", sz: 10, color: { rgb: "000000" } };
+      const fill = rgb => ({ patternType: "solid", fgColor: { rgb } });
+      const tableTypes = new Set([
+        "headerIncome", "headerExpense", "headerReconciliation", "headerMeals",
+        "payment", "expenseInput", "mealInput", "data", "total", "sales",
+        "difference", "brokenMoney", "dailyMain", "dailySub", "netRevenue"
+      ]);
 
       for (let r = 0; r < rows.length; r++) {
         const type = rowTypes[r];
@@ -2114,36 +2141,64 @@ const firebaseConfig = {
           };
 
           if (type === "title") {
-            style.font = { name: "Aptos Display", sz: 16, bold: true, color: { rgb: "17324D" } };
+            style.font = { ...defaultFont, sz: 11, bold: true };
             style.alignment = { horizontal: "center", vertical: "center" };
           } else if (type === "meta") {
-            if (c === 0) style.font = { ...defaultFont, bold: true };
+            style.font = { ...defaultFont, bold: true };
             style.alignment = { horizontal: "left", vertical: "center" };
-          } else if (type === "header") {
-            style.fill = { patternType: "solid", fgColor: { rgb: "17324D" } };
-            style.font = { name: "Aptos", sz: 10, bold: true, color: { rgb: "FFFFFF" } };
-            style.alignment = { horizontal: c === 0 ? "left" : "center", vertical: "center", wrapText: true };
-            style.border = thinBorder;
-          } else if (type === "data" || type === "total" || type === "summary") {
-            style.border = thinBorder;
-            if (type === "total") {
-              style.fill = { patternType: "solid", fgColor: { rgb: "DCEFEA" } };
+          } else if (tableTypes.has(type)) {
+            style.border = blackBorder;
+
+            if (type === "headerIncome") {
+              style.fill = fill("5B9BD5");
               style.font = { ...defaultFont, bold: true };
-            } else if (type === "summary") {
-              style.fill = { patternType: "solid", fgColor: { rgb: "C7E7DE" } };
-              style.font = { ...defaultFont, bold: true, color: { rgb: "17324D" } };
+              style.alignment = { horizontal: "left", vertical: "center", wrapText: true };
+            } else if (type === "headerExpense") {
+              style.fill = fill("A6A6A6");
+              style.font = { ...defaultFont, bold: true };
+              style.alignment = { horizontal: "left", vertical: "center", wrapText: true };
+            } else if (type === "headerReconciliation") {
+              style.fill = fill("C6E0B4");
+              style.font = { ...defaultFont, bold: true };
+              style.alignment = { horizontal: "left", vertical: "center", wrapText: true };
+            } else if (type === "headerMeals") {
+              style.fill = fill("FFE699");
+              style.font = { ...defaultFont, bold: true };
+              style.alignment = { horizontal: "left", vertical: "center", wrapText: true };
+            } else if (type === "payment") {
+              if (c === 1) style.fill = fill("FFD966");
+            } else if (type === "expenseInput" || type === "mealInput") {
+              if (c === 1) style.fill = fill("FFD966");
+            } else if (type === "total") {
+              style.font = { ...defaultFont, bold: true };
+            } else if (type === "sales") {
+              style.font = { ...defaultFont, bold: true };
+              style.fill = fill(c === 1 ? "FFD966" : "FFF2CC");
+            } else if (type === "difference") {
+              style.font = { ...defaultFont, bold: true };
+              style.fill = fill("D9D9D9");
+            } else if (type === "brokenMoney") {
+              style.font = { ...defaultFont, bold: true };
+              style.fill = fill("FCE4D6");
+            } else if (type === "dailyMain" || type === "dailySub") {
+              style.fill = fill("BDD7EE");
+              style.font = { ...defaultFont, bold: true, sz: type === "dailyMain" ? 12 : 10 };
+            } else if (type === "netRevenue") {
+              style.fill = fill("D9E2F3");
+              style.font = { ...defaultFont, bold: true, sz: 12 };
             }
           }
-          cell.s = style;
 
           if (cell.t === "n" || (cell.f && typeof cell.v === "number")) {
-            cell.z = signedCells.has(address) ? signedCurrencyFormat : currencyFormat;
+            cell.z = signedCells.has(address) ? signedNumberFormat : standardNumberFormat;
             style.alignment = { horizontal: "right", vertical: "center" };
           }
+
+          cell.s = style;
         }
       }
 
-      // Formula pada workbook akan dihitung ulang ketika dibuka di Excel/LibreOffice.
+      // Excel menghitung ulang formula saat file dibuka.
       const wb = XLSX.utils.book_new();
       wb.Workbook = wb.Workbook || {};
       wb.Workbook.CalcPr = { calcMode: "auto", fullCalcOnLoad: true, forceFullCalc: true };
