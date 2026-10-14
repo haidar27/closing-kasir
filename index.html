@@ -585,15 +585,15 @@
               <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
                 <div class="section-title">
                   <h4>Informasi Singkat</h4>
-                  <p>Setoran tunai dibulatkan turun ke kelipatan Rp50.000.</p>
+                  <p>Setoran dihitung dari Cash murni yang diinput; pengeluaran tidak ikut menjadi dasar setoran.</p>
                 </div>
                 <div class="money-summary four-col" style="margin-top:0;">
                   <div class="stat primary">
-                    <div class="label">Setoran Cash (Dibulatkan)</div>
+                    <div class="label">Setoran Cash Murni (Dibulatkan)</div>
                     <div id="cashDepositDisplay" class="value">Rp 0</div>
                   </div>
                   <div class="stat warning">
-                    <div class="label">Sisa Omzet → Uang Pecah</div>
+                    <div class="label">Sisa Cash Murni → Uang Pecah</div>
                     <div id="turnoverRemainderDisplay" class="value">Rp 0</div>
                   </div>
                   <div class="stat">
@@ -601,7 +601,7 @@
                     <div id="brokenMoneyBeforeRemainderDisplay" class="value">Rp 0</div>
                   </div>
                   <div class="stat success">
-                    <div class="label">Uang Pecah Setelah Tambahan</div>
+                    <div class="label">Uang Pecah Setelah Tambahan Sisa Cash</div>
                     <div id="brokenMoneyAfterRemainderDisplay" class="value">Rp 0</div>
                   </div>
                 </div>
@@ -1156,6 +1156,7 @@ const firebaseConfig = {
             hasPreviousBrokenMoney: totals.hasPreviousBrokenMoney,
             brokenMoneyDifference: totals.brokenMoneyDifference,
             reconciliationTotal: totals.reconciliationTotal,
+            cashDepositBasis: totals.cashDepositBasis,
             cashDepositAmount: totals.cashDepositAmount,
             turnoverRemainder: totals.turnoverRemainder,
             brokenMoneyBeforeTurnoverRemainder: totals.brokenMoneyBeforeTurnoverRemainder,
@@ -1215,12 +1216,14 @@ const firebaseConfig = {
         ? brokenMoney - previousBrokenMoney
         : null;
 
-      // Setoran tunai dibulatkan TURUN ke kelipatan Rp50.000.
-      // Sisa omzet ditampilkan sebagai informasi terpisah; tidak mengubah
-      // input manual uang pecah maupun perhitungan selisih harian.
+      // Setoran Cash harus memakai nominal Cash murni yang diinput,
+      // bukan Cash setelah alokasi pengeluaran, total pemasukan, atau omzet.
+      // Semua pengeluaran tetap dicatat/dialokasikan terpisah dan tidak menjadi
+      // bagian dasar setoran tunai. Nilai dibulatkan TURUN ke kelipatan Rp50.000.
+      const cashDepositBasis = baseCash;
       const cashDepositUnit = 50000;
-      const cashDepositAmount = Math.floor(totalSales / cashDepositUnit) * cashDepositUnit;
-      const turnoverRemainder = Math.max(0, totalSales - cashDepositAmount);
+      const cashDepositAmount = Math.floor(Math.max(0, cashDepositBasis) / cashDepositUnit) * cashDepositUnit;
+      const turnoverRemainder = Math.max(0, cashDepositBasis - cashDepositAmount);
       const brokenMoneyBeforeTurnoverRemainder = brokenMoney;
       const brokenMoneyAfterTurnoverRemainder = brokenMoney + turnoverRemainder;
       const finalBrokenMoney = brokenMoney;
@@ -1260,6 +1263,7 @@ const firebaseConfig = {
         hasPreviousBrokenMoney,
         brokenMoneyDifference,
         reconciliationTotal,
+        cashDepositBasis,
         cashDepositAmount,
         turnoverRemainder,
         brokenMoneyBeforeTurnoverRemainder,
@@ -1517,6 +1521,7 @@ const firebaseConfig = {
           previousBrokenMoneyDate: totals.previousBrokenMoneyDate,
           hasPreviousBrokenMoney: totals.hasPreviousBrokenMoney,
           brokenMoneyDifference: totals.brokenMoneyDifference,
+          cashDepositBasis: totals.cashDepositBasis,
           cashDepositAmount: totals.cashDepositAmount,
           turnoverRemainder: totals.turnoverRemainder,
           brokenMoneyBeforeTurnoverRemainder: totals.brokenMoneyBeforeTurnoverRemainder,
@@ -1679,6 +1684,7 @@ const firebaseConfig = {
           previousBrokenMoneyDate: recalculated.previousBrokenMoneyDate,
           hasPreviousBrokenMoney: recalculated.hasPreviousBrokenMoney,
           brokenMoneyDifference: recalculated.brokenMoneyDifference,
+          cashDepositBasis: recalculated.cashDepositBasis,
           cashDepositAmount: recalculated.cashDepositAmount,
           turnoverRemainder: recalculated.turnoverRemainder,
           brokenMoneyBeforeTurnoverRemainder: recalculated.brokenMoneyBeforeTurnoverRemainder,
@@ -1861,9 +1867,9 @@ const firebaseConfig = {
       const income = record.income || {};
       const operational = record.operationalExpenses || [];
       const meals = record.mealExpenses || [];
-      const totalSalesValue = Number(totals.totalSales || 0);
-      const cashDepositAmount = Number(totals.cashDepositAmount ?? Math.floor(totalSalesValue / 50000) * 50000);
-      const turnoverRemainder = Number(totals.turnoverRemainder ?? Math.max(0, totalSalesValue - cashDepositAmount));
+      const pureCashDepositBasis = Math.max(0, Number(totals.cashDepositBasis ?? income.cash ?? 0));
+      const cashDepositAmount = Math.floor(pureCashDepositBasis / 50000) * 50000;
+      const turnoverRemainder = Math.max(0, pureCashDepositBasis - cashDepositAmount);
       const brokenMoneyBeforeTurnoverRemainder = Number(
         totals.brokenMoneyBeforeTurnoverRemainder ?? totals.brokenMoneyCounted ?? totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0
       );
@@ -1901,10 +1907,10 @@ const firebaseConfig = {
           ["Uang Pecah Saat Ini (input manual, sebelum sisa omzet)", brokenMoneyBeforeTurnoverRemainder],
           [],
           ["INFORMASI SINGKAT"],
-          ["Setoran Cash (dibulatkan turun ke kelipatan Rp50.000)", cashDepositAmount],
-          ["Sisa Omzet → Uang Pecah", turnoverRemainder],
-          ["Uang Pecah Sebelum Tambahan Sisa Omzet", brokenMoneyBeforeTurnoverRemainder],
-          ["Uang Pecah Setelah Tambahan Sisa Omzet", brokenMoneyAfterTurnoverRemainder]
+          ["Setoran Cash Murni (dibulatkan turun ke kelipatan Rp50.000)", cashDepositAmount],
+          ["Sisa Cash Murni → Uang Pecah", turnoverRemainder],
+          ["Uang Pecah Sebelum Tambahan Sisa Cash", brokenMoneyBeforeTurnoverRemainder],
+          ["Uang Pecah Setelah Tambahan Sisa Cash", brokenMoneyAfterTurnoverRemainder]
         ],
         details: [
           ["Jenis", "Kategori", "Nama", "Nominal", "Keterangan"],
