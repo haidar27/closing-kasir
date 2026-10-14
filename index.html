@@ -536,6 +536,8 @@
                 <div class="stat primary"><div class="label">Total Penjualan / Omzet</div><div id="finalSalesDisplay" class="value">Rp 0</div></div>
                 <div class="stat warning"><div class="label">Tambahan Uang Pecah dari Omzet</div><div id="salesRemainderDisplay" class="value">Rp 0</div></div>
                 <div class="stat"><div class="label">Uang Pecah Akhir</div><div id="finalBrokenMoneyDisplay" class="value">Rp 0</div></div>
+                <div class="stat"><div class="label">Uang Pecah Akhir Closing Sebelumnya</div><div id="previousBrokenMoneyDisplay" class="value">—</div><div id="previousBrokenMoneyDateDisplay" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;">Belum ada pembanding</div></div>
+                <div id="brokenMoneyDifferenceStat" class="stat warning"><div class="label">Selisih Uang Pecah</div><div id="brokenMoneyDifferenceDisplay" class="value">—</div><div id="brokenMoneyDifferenceStatus" style="display:block;margin-top:5px;color:var(--muted);font-size:10px;">Belum ada pembanding</div></div>
                 <div class="stat success"><div class="label">Setoran QRIS</div><div id="qrisOwnerDepositDisplay" class="value">Rp 0</div></div>
                 <div class="stat success"><div class="label">Setoran Cash</div><div id="cashOwnerDepositDisplay" class="value">Rp 0</div></div>
                 <div id="differenceStat" class="stat danger">
@@ -614,7 +616,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
     import {
-      initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, getDoc, deleteDoc,
+      initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, getDoc, getDocs, deleteDoc,
       onSnapshot, query, where, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
@@ -670,6 +672,8 @@ const firebaseConfig = {
     let unsubscribeHistory = null;
     let unsubscribeCurrent = null;
     let currentRecord = null;
+    let previousBrokenMoneyRecord = null;
+    let previousBrokenMoneyRequestId = 0;
     let activeDocId = "";
     let toastTimer = null;
     let isHydrating = false;
@@ -789,6 +793,17 @@ const firebaseConfig = {
       const n = Number(value || 0);
       if (!Number.isFinite(n) || n === 0) return "Rp 0";
       return `${n > 0 ? "+" : "-"}${money(Math.abs(n))}`;
+    }
+
+    function getRecordFinalBrokenMoney(record) {
+      const totals = record?.totals || {};
+      if (totals.finalBrokenMoney !== undefined && totals.finalBrokenMoney !== null) {
+        const finalValue = Number(totals.finalBrokenMoney);
+        return Number.isFinite(finalValue) ? finalValue : 0;
+      }
+      const initial = Number(totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0);
+      const remainder = Number(totals.salesRemainder ?? 0);
+      return (Number.isFinite(initial) ? initial : 0) + (Number.isFinite(remainder) ? remainder : 0);
     }
 
     function numericInput(id) {
@@ -979,6 +994,86 @@ const firebaseConfig = {
         .filter(row => row.amount > 0 || row.note.trim());
     }
 
+    async function loadPreviousBrokenMoney(branch, dateKey) {
+      const requestId = ++previousBrokenMoneyRequestId;
+      const savedRecord = currentRecord && currentRecord.branch === branch && currentRecord.dateKey === dateKey
+        ? currentRecord
+        : null;
+      previousBrokenMoneyRecord = null;
+
+      if (!branch || !dateKey || !db || !authUser) {
+        updateCalculations();
+        return null;
+      }
+
+      try {
+        // Ambil closing cabang yang sama, lalu pilih tanggal paling akhir
+        // yang benar-benar lebih lama dari tanggal yang sedang dikerjakan.
+        const previousQuery = query(
+          collection(db, "closings"),
+          where("branchId", "==", sanitizeId(branch))
+        );
+        const snapshot = await getDocs(previousQuery);
+        if (requestId !== previousBrokenMoneyRequestId) return null;
+
+        const candidates = [];
+        snapshot.forEach((docSnapshot) => {
+          const data = docSnapshot.data();
+          if (data?.dateKey && data.dateKey < dateKey) {
+            candidates.push({ ...data, id: docSnapshot.id });
+          }
+        });
+        candidates.sort((a, b) => String(b.dateKey).localeCompare(String(a.dateKey)));
+        previousBrokenMoneyRecord = candidates[0] || null;
+      } catch (error) {
+        if (requestId !== previousBrokenMoneyRequestId) return null;
+
+        // Jika pembacaan Firestore gagal, gunakan pembanding yang pernah
+        // tersimpan bersama closing ini bila tersedia.
+        const savedTotals = savedRecord?.totals || {};
+        if (
+          savedTotals.previousBrokenMoneyDate &&
+          savedTotals.previousBrokenMoneyDate < dateKey &&
+          savedTotals.previousBrokenMoney !== undefined &&
+          savedTotals.previousBrokenMoney !== null
+        ) {
+          previousBrokenMoneyRecord = {
+            branch,
+            dateKey: savedTotals.previousBrokenMoneyDate,
+            totals: { finalBrokenMoney: Number(savedTotals.previousBrokenMoney) }
+          };
+        } else {
+          handleFirebaseError(error, "Firestore previous broken-money lookup");
+        }
+      }
+
+      if (requestId !== previousBrokenMoneyRequestId) return null;
+      updateCalculations();
+
+      // Pastikan ekspor untuk record tersimpan memakai hasil perbandingan
+      // terbaru, meskipun record itu sudah dibuat oleh versi aplikasi lama.
+      if (
+        currentRecord &&
+        currentRecord.branch === branch &&
+        currentRecord.dateKey === dateKey &&
+        !formDirty
+      ) {
+        const totals = computeTotals();
+        currentRecord = {
+          ...currentRecord,
+          totals: {
+            ...(currentRecord.totals || {}),
+            previousBrokenMoney: totals.previousBrokenMoney,
+            previousBrokenMoneyDate: totals.previousBrokenMoneyDate,
+            hasPreviousBrokenMoney: totals.hasPreviousBrokenMoney,
+            brokenMoneyDifference: totals.brokenMoneyDifference
+          }
+        };
+      }
+
+      return previousBrokenMoneyRecord;
+    }
+
     function computeTotals() {
       const baseCash = numericInput("incomeCash");
       const baseQris = numericInput("incomeQris");
@@ -996,6 +1091,17 @@ const firebaseConfig = {
 
       const totalSales = numericInput("totalSales");
       const brokenMoney = numericInput("brokenMoney");
+      const hasPreviousBrokenMoney = Boolean(previousBrokenMoneyRecord);
+      const previousBrokenMoney = hasPreviousBrokenMoney
+        ? getRecordFinalBrokenMoney(previousBrokenMoneyRecord)
+        : null;
+      const previousBrokenMoneyDate = hasPreviousBrokenMoney
+        ? String(previousBrokenMoneyRecord.dateKey || "")
+        : "";
+      // Positif = uang pecah hari ini lebih banyak; negatif = kekurangan.
+      const brokenMoneyDifference = hasPreviousBrokenMoney
+        ? brokenMoney - previousBrokenMoney
+        : null;
 
       // Setoran QRIS mengikuti seluruh nominal QRIS yang tersedia.
       const qrisOwnerDeposit = Math.min(baseQris, totalSales);
@@ -1039,6 +1145,10 @@ const firebaseConfig = {
         totalIncome,
         totalSales,
         brokenMoney,
+        previousBrokenMoney,
+        previousBrokenMoneyDate,
+        hasPreviousBrokenMoney,
+        brokenMoneyDifference,
         salesRemainder,
         ownerWithdrawal,
         qrisOwnerDeposit,
@@ -1070,6 +1180,33 @@ const firebaseConfig = {
       $("finalBrokenMoneyDisplay").textContent = money(totals.finalBrokenMoney);
       $("qrisOwnerDepositDisplay").textContent = money(totals.qrisOwnerDeposit);
       $("cashOwnerDepositDisplay").textContent = money(totals.cashOwnerDeposit);
+
+      $("previousBrokenMoneyDisplay").textContent = totals.hasPreviousBrokenMoney
+        ? money(totals.previousBrokenMoney)
+        : "—";
+      $("previousBrokenMoneyDateDisplay").textContent = totals.hasPreviousBrokenMoney
+        ? `Closing ${formatDateKey(totals.previousBrokenMoneyDate)}`
+        : "Belum ada closing sebelumnya";
+      $("brokenMoneyDifferenceDisplay").textContent = totals.hasPreviousBrokenMoney
+        ? signedMoney(totals.brokenMoneyDifference)
+        : "—";
+
+      const brokenDiffStat = $("brokenMoneyDifferenceStat");
+      const brokenDiffStatus = $("brokenMoneyDifferenceStatus");
+      brokenDiffStat.classList.remove("success", "warning", "danger");
+      if (!totals.hasPreviousBrokenMoney) {
+        brokenDiffStat.classList.add("warning");
+        brokenDiffStatus.textContent = "Tidak ada closing sebelumnya sebagai pembanding";
+      } else if (totals.brokenMoneyDifference < 0) {
+        brokenDiffStat.classList.add("danger");
+        brokenDiffStatus.textContent = `MINUS • kurang ${money(Math.abs(totals.brokenMoneyDifference))} dari closing sebelumnya`;
+      } else if (totals.brokenMoneyDifference > 0) {
+        brokenDiffStat.classList.add("warning");
+        brokenDiffStatus.textContent = `PLUS • lebih ${money(totals.brokenMoneyDifference)} dari closing sebelumnya`;
+      } else {
+        brokenDiffStat.classList.add("success");
+        brokenDiffStatus.textContent = "PAS • sama dengan uang pecah closing sebelumnya";
+      }
 
       $("differenceDisplay").textContent = signedMoney(totals.difference);
 
@@ -1197,6 +1334,8 @@ const firebaseConfig = {
 
     function resetForm(dateKey = localDateKey(), branch = $("branch").value || BRANCHES[0]) {
       isHydrating = true;
+      previousBrokenMoneyRecord = null;
+      previousBrokenMoneyRequestId++;
       $("closingDate").value = dateKey;
       $("branch").value = branch;
       $("cashierName").value = "";
@@ -1216,6 +1355,7 @@ const firebaseConfig = {
       isHydrating = false;
       validateDate();
       if (typeof updateDeleteVisibility === "function") updateDeleteVisibility();
+      if (branch && dateKey) loadPreviousBrokenMoney(branch, dateKey);
     }
 
     function serializeRows(rows) {
@@ -1232,7 +1372,7 @@ const firebaseConfig = {
       const monthKey = dateKey.slice(0, 7);
       const totals = computeTotals();
       return {
-        schemaVersion: 3,
+        schemaVersion: 4,
         dateKey,
         monthKey,
         branchId: sanitizeId(branch),
@@ -1261,6 +1401,10 @@ const firebaseConfig = {
           difference: totals.difference,
           brokenMoney: totals.brokenMoney,
           brokenMoneyInitial: totals.brokenMoney,
+          previousBrokenMoney: totals.previousBrokenMoney,
+          previousBrokenMoneyDate: totals.previousBrokenMoneyDate,
+          hasPreviousBrokenMoney: totals.hasPreviousBrokenMoney,
+          brokenMoneyDifference: totals.brokenMoneyDifference,
           salesRemainder: totals.salesRemainder,
           ownerWithdrawal: totals.ownerWithdrawal,
           qrisOwnerDeposit: totals.qrisOwnerDeposit,
@@ -1292,13 +1436,25 @@ const firebaseConfig = {
         showToast("Firebase belum siap. Periksa konfigurasi Firebase dan koneksi.", "error", 4500);
         return;
       }
-      const payload = collectPayload();
-      const error = validatePayload(payload);
-      if (error) { showToast(error, "error"); return; }
 
-      const id = documentId(payload.branch, payload.dateKey);
-      setLoading(true, "Menyimpan closing ke Firebase…");
+      const branch = $("branch").value;
+      const dateKey = $("closingDate").value;
+      setLoading(true, "Memeriksa uang pecah closing sebelumnya…");
       try {
+        // Tunggu hasil pembanding supaya laporan yang disimpan tidak memakai
+        // nilai uang pecah dari cabang atau tanggal yang berbeda.
+        await loadPreviousBrokenMoney(branch, dateKey);
+        if ($("branch").value !== branch || $("closingDate").value !== dateKey) {
+          showToast("Cabang atau tanggal berubah. Periksa kembali data sebelum menyimpan.", "warn");
+          return;
+        }
+
+        const payload = collectPayload();
+        const error = validatePayload(payload);
+        if (error) { showToast(error, "error"); return; }
+
+        const id = documentId(payload.branch, payload.dateKey);
+        setLoading(true, "Menyimpan closing ke Firebase…");
         await setDoc(doc(db, "closings", id), payload, { merge: true });
         activeDocId = id;
         currentRecord = { ...payload, id };
@@ -1339,6 +1495,21 @@ const firebaseConfig = {
 
     function applyRecord(record) {
       isHydrating = true;
+      previousBrokenMoneyRecord = null;
+      previousBrokenMoneyRequestId++;
+      // Tampilkan pembanding tersimpan bila tersedia sampai lookup terbaru selesai.
+      if (
+        record?.totals?.hasPreviousBrokenMoney &&
+        record.totals.previousBrokenMoneyDate &&
+        record.totals.previousBrokenMoney !== undefined &&
+        record.totals.previousBrokenMoney !== null
+      ) {
+        previousBrokenMoneyRecord = {
+          branch: record.branch,
+          dateKey: record.totals.previousBrokenMoneyDate,
+          totals: { finalBrokenMoney: Number(record.totals.previousBrokenMoney) }
+        };
+      }
       currentRecord = record;
       activeDocId = record.id || documentId(record.branch, record.dateKey);
       $("closingDate").value = record.dateKey || localDateKey();
@@ -1377,6 +1548,10 @@ const firebaseConfig = {
           difference: recalculated.difference,
           brokenMoney: recalculated.brokenMoney,
           brokenMoneyInitial: recalculated.brokenMoney,
+          previousBrokenMoney: recalculated.previousBrokenMoney,
+          previousBrokenMoneyDate: recalculated.previousBrokenMoneyDate,
+          hasPreviousBrokenMoney: recalculated.hasPreviousBrokenMoney,
+          brokenMoneyDifference: recalculated.brokenMoneyDifference,
           salesRemainder: recalculated.salesRemainder,
           ownerWithdrawal: recalculated.ownerWithdrawal,
           qrisOwnerDeposit: recalculated.qrisOwnerDeposit,
@@ -1393,6 +1568,7 @@ const firebaseConfig = {
       $("exportPdfBtn").disabled = false;
       isHydrating = false;
       validateDate();
+      loadPreviousBrokenMoney(record.branch || $("branch").value, record.dateKey || $("closingDate").value);
     }
 
     async function loadActiveFromHistory(record) {
@@ -1548,7 +1724,11 @@ const firebaseConfig = {
           [],
           ["REKAP AKHIR"],
           ["Total Penjualan / Omzet", totals.totalSales || 0],
-          ["Uang Pecah Awal", totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0],
+          ["Uang Pecah Awal / Dihitung Hari Ini", totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0],
+          ["Uang Pecah Akhir Closing Sebelumnya", totals.hasPreviousBrokenMoney ? (totals.previousBrokenMoney ?? 0) : "Tidak ada data pembanding"],
+          ["Tanggal Closing Pembanding", totals.hasPreviousBrokenMoney ? formatDateKey(totals.previousBrokenMoneyDate) : "Tidak ada closing sebelumnya"],
+          ["Selisih Uang Pecah", totals.hasPreviousBrokenMoney ? signedMoney(totals.brokenMoneyDifference ?? 0) : "Tidak ada data pembanding"],
+          ["Status Selisih Uang Pecah", !totals.hasPreviousBrokenMoney ? "Tidak ada closing sebelumnya" : (totals.brokenMoneyDifference < 0 ? "MINUS - uang pecah berkurang" : (totals.brokenMoneyDifference > 0 ? "PLUS - uang pecah bertambah" : "PAS - nominal sama"))],
           ["Tambahan Uang Pecah dari Omzet", totals.salesRemainder || 0],
           ["Uang Pecah Akhir", totals.finalBrokenMoney ?? totals.brokenMoney ?? 0],
           ["Setoran QRIS", totals.qrisOwnerDeposit ?? 0],
@@ -1673,6 +1853,7 @@ const firebaseConfig = {
             setStatus(navigator.onLine ? "Firebase aktif • memuat data…" : "Offline • cache lokal", navigator.onLine ? "warn" : "warn");
             subscribeHistory();
             subscribeCurrentRecord();
+            loadPreviousBrokenMoney($("branch").value, $("closingDate").value);
           }
         });
       } catch (err) {
