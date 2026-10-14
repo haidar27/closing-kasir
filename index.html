@@ -21,18 +21,18 @@
 
   <style>
     :root {
-      --bg: #fbf7f7;
+      --bg: #f4f7fb;
       --surface: #ffffff;
-      --surface-soft: #fffafa;
-      --line: #ead9da;
-      --text: #3f3031;
-      --muted: #79686a;
-      --primary: #a83f45;
-      --primary-dark: #8f3339;
-      --success: #4f8a67;
-      --warning: #a56a2a;
-      --danger: #b33f46;
-      --shadow: 0 12px 30px rgba(105, 49, 53, .09);
+      --surface-soft: #f8fafc;
+      --line: #dbe4ed;
+      --text: #1e293b;
+      --muted: #64748b;
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --success: #15803d;
+      --warning: #b45309;
+      --danger: #b91c1c;
+      --shadow: 0 12px 30px rgba(15, 23, 42, .07);
       --radius: 18px;
     }
 
@@ -52,7 +52,7 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(122, 35, 42, .96);
+      background: rgba(15, 23, 42, .97);
       backdrop-filter: blur(14px);
       border-bottom: 1px solid rgba(255,255,255,.08);
       color: #fff;
@@ -69,9 +69,9 @@
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .brand-mark {
       width: 42px; height: 42px; border-radius: 12px;
-      background: linear-gradient(135deg, #c95a61, #a83f45);
+      background: linear-gradient(135deg, #0d9488, #0f766e);
       display: grid; place-items: center; font-weight: 900;
-      box-shadow: 0 8px 20px rgba(168,63,69,.26);
+      box-shadow: 0 8px 20px rgba(15,118,110,.24);
       flex: 0 0 auto;
     }
     .brand h1 { margin: 0; font-size: 17px; letter-spacing: .2px; }
@@ -94,7 +94,7 @@
       margin-bottom: 18px;
     }
     .hero-card {
-      background: linear-gradient(135deg, #7f252c, #b34c53);
+      background: linear-gradient(135deg, #0f172a, #0f766e);
       color: #fff; border-radius: 24px; padding: 26px;
       box-shadow: var(--shadow); overflow: hidden; position: relative;
     }
@@ -132,7 +132,7 @@
       width:100%; border:1px solid #cbd5e1; border-radius:12px; background:#fff;
       color:var(--text); outline:none; transition:.16s ease; padding:11px 12px;
     }
-    input:focus, select:focus, textarea:focus { border-color: #d77b81; box-shadow: 0 0 0 4px rgba(179,63,70,.12); }
+    input:focus, select:focus, textarea:focus { border-color: #0d9488; box-shadow: 0 0 0 4px rgba(13,148,136,.14); }
     input[disabled], select[disabled] { background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
     .money { text-align:right; font-variant-numeric: tabular-nums; }
     .money-input { font-variant-numeric: tabular-nums; }
@@ -149,32 +149,32 @@
     }
     .stat .label { color:var(--muted); font-size:11px; margin-bottom:6px; }
     .stat .value { font-size:19px; font-weight:850; letter-spacing:-.3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .stat.primary { background:#fff0f1; border-color:#f0c9cc; }
-    .stat.success { background:#edf7f0; border-color:#c9e1d2; }
-    .stat.warning { background:#fff6ea; border-color:#efd7b8; }
-    .stat.danger { background:#fff0f1; border-color:#efc5c8; }
+    .stat.primary { background:#ecfdf5; border-color:#a7f3d0; }
+    .stat.success { background:#f0fdf4; border-color:#bbf7d0; }
+    .stat.warning { background:#fffbeb; border-color:#fde68a; }
+    .stat.danger { background:#fef2f2; border-color:#fecaca; }
 
     .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:14px; }
     table { width:100%; border-collapse:collapse; min-width:760px; }
     th, td { padding:10px 11px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
-    th { background:#fff7f7; color:#5f4d4f; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+    th { background:#f1f5f9; color:#334155; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
     td { font-size:12px; }
     tr:last-child td { border-bottom:0; }
     .table-input { padding:9px 10px; border-radius:10px; }
     .row-index { width:40px; text-align:center; color:var(--muted); font-weight:700; }
     .row-actions { width:54px; text-align:center; }
     .remove-btn {
-      width:32px; height:32px; border:1px solid #fecaca; color:var(--danger); background:#fff1f2;
+      width:32px; height:32px; border:1px solid #fecaca; color:var(--danger); background:#fef2f2;
       border-radius:10px; font-weight:800;
     }
     .add-btn {
       border:1px dashed #94a3b8; background:#fff; color:#334155; padding:9px 12px; border-radius:11px;
       font-weight:700; font-size:12px;
     }
-    .add-btn:hover { border-color:#d77b81; color:var(--primary); background:#fff0f1; }
+    .add-btn:hover { border-color:#0d9488; color:var(--primary); background:#f0fdfa; }
 
     .hint {
-      display:flex; gap:10px; align-items:flex-start; padding:12px 14px; background:#fff8f8; border:1px solid var(--line); border-radius:12px;
+      display:flex; gap:10px; align-items:flex-start; padding:12px 14px; background:#f8fafc; border:1px solid var(--line); border-radius:12px;
       margin-top:12px; color:#475569; font-size:11px; line-height:1.55;
     }
     .hint strong { color:#0f172a; }
@@ -188,9 +188,9 @@
     .btn-primary { background:var(--primary); color:#fff; }
     .btn-primary:hover:not(:disabled) { background:var(--primary-dark); transform:translateY(-1px); }
     .btn-secondary { background:#fff; color:#334155; border-color:#cbd5e1; }
-    .btn-secondary:hover:not(:disabled) { background:#faf9fc; }
+    .btn-secondary:hover:not(:disabled) { background:#f8fafc; }
     .btn-danger { background:#fff; color:var(--danger); border-color:#fecaca; }
-    .btn-dark { background:#6f252b; color:#fff; }
+    .btn-dark { background:#1e293b; color:#fff; }
 
     .history-tools { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .history-list { display:grid; gap:10px; max-height: 680px; overflow:auto; padding-right:3px; }
@@ -199,8 +199,8 @@
       display:grid; grid-template-columns: 1fr auto; gap:10px; cursor:pointer;
       transition:.15s ease;
     }
-    .history-item:hover { border-color:#cbbfe0; box-shadow:0 6px 16px rgba(15,23,42,.06); }
-    .history-item.active { border-color:#d77b81; background:#fff0f1; }
+    .history-item:hover { border-color:#94a3b8; box-shadow:0 6px 16px rgba(15,23,42,.06); }
+    .history-item.active { border-color:#0d9488; background:#f0fdfa; }
     .history-date { font-weight:850; font-size:13px; }
     .history-meta { color:var(--muted); font-size:11px; margin-top:3px; }
     .history-amount { text-align:right; font-weight:850; font-size:13px; }
@@ -225,9 +225,9 @@
       font-size:12px; line-height:1.45;
     }
     .toast.show { transform:translateY(0); opacity:1; }
-    .toast.success { background:#6d947b; }
-    .toast.error { background:#a66b6b; }
-    .toast.warn { background:#a88755; }
+    .toast.success { background:#166534; }
+    .toast.error { background:#991b1b; }
+    .toast.warn { background:#92400e; }
 
     .loading-overlay {
       position:fixed; inset:0; z-index:90; background:rgba(15,23,42,.35); backdrop-filter:blur(3px);
@@ -235,29 +235,29 @@
     }
     .loading-overlay.show { display:grid; }
     .spinner-card { background:#fff; border-radius:16px; padding:18px 20px; box-shadow:var(--shadow); display:flex; align-items:center; gap:12px; font-size:12px; font-weight:750; }
-    .spinner { width:18px; height:18px; border:3px solid #e3dcef; border-top-color:#a83f45; border-radius:50%; animation:spin .7s linear infinite; }
+    .spinner { width:18px; height:18px; border:3px solid #dbeafe; border-top-color:#0f766e; border-radius:50%; animation:spin .7s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
 
 
     .branch-modal {
       position:fixed; inset:0; z-index:120; display:none; place-items:center;
-      padding:18px; background:rgba(74,31,34,.32); backdrop-filter:blur(5px);
+      padding:18px; background:rgba(15,23,42,.32); backdrop-filter:blur(5px);
     }
     .branch-modal.show { display:grid; }
     .branch-modal-card {
-      width:min(380px,100%); background:#fff; border:1px solid #ead9da; border-radius:22px;
-      box-shadow:0 24px 60px rgba(105,49,53,.18); padding:24px; text-align:center;
+      width:min(380px,100%); background:#fff; border:1px solid #dbe4ed; border-radius:22px;
+      box-shadow:0 24px 60px rgba(15,23,42,.18); padding:24px; text-align:center;
     }
     .branch-modal-icon {
       width:48px; height:48px; margin:0 auto 12px; border-radius:15px; display:grid; place-items:center;
-      background:#fff0f1; font-size:22px;
+      background:#f0fdfa; font-size:22px;
     }
     .branch-modal-card h3 { margin:0; font-size:18px; color:#36343d; }
-    .branch-modal-branch { margin:6px 0 20px; font-size:14px; font-weight:800; color:#a83f45; }
+    .branch-modal-branch { margin:6px 0 20px; font-size:14px; font-weight:800; color:#0f766e; }
     .branch-modal-card label { display:block; text-align:left; margin-bottom:7px; font-size:12px; font-weight:800; color:#4d4956; }
     .branch-code-input { text-align:center; letter-spacing:8px; font-size:22px; font-weight:800; }
-    .branch-code-input::placeholder { color:#c8c1d2; letter-spacing:6px; }
-    .branch-code-error { min-height:18px; margin-top:8px; color:#b33f46; font-size:11px; font-weight:700; }
+    .branch-code-input::placeholder { color:#cbd5e1; letter-spacing:6px; }
+    .branch-code-error { min-height:18px; margin-top:8px; color:#b91c1c; font-size:11px; font-weight:700; }
     .branch-modal-actions { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:14px; }
 
     .footer-note { text-align:center; color:var(--muted); font-size:11px; margin-top:18px; }
@@ -312,7 +312,7 @@
         align-items:center;
         width:100%;
         padding:10px 11px;
-        border-bottom:1px solid #f2e5e6;
+        border-bottom:1px solid #e2e8f0;
         text-align:left;
         min-width:0;
       }
@@ -475,10 +475,14 @@
               </div>
 
               <div class="money-summary">
-                <div class="stat"><div class="label">Cash Dasar</div><div id="cashBaseDisplay" class="value">Rp 0</div></div>
                 <div class="stat primary"><div class="label">Total Cash</div><div id="cashAdjustedDisplay" class="value">Rp 0</div></div>
                 <div class="stat"><div class="label">Total QRIS</div><div id="qrisAdjustedDisplay" class="value">Rp 0</div></div>
+                <div class="stat"><div class="label">Total Transfer</div><div id="transferDisplay" class="value">Rp 0</div></div>
                 <div class="stat success"><div class="label">Total Pemasukan</div><div id="totalIncomeDisplay" class="value">Rp 0</div></div>
+              </div>
+              <div class="hint" style="margin-top:12px;">
+                <span aria-hidden="true">ℹ️</span>
+                <div>Pengeluaran operasional yang namanya mengandung <strong>BukuPay, admin, atau adm</strong> otomatis masuk ke Total QRIS. Pengeluaran lainnya, termasuk makan/minum, otomatis masuk ke Total Cash.</div>
               </div>
             </div>
           </article>
@@ -989,6 +993,7 @@ const firebaseConfig = {
 
         nameInput.addEventListener("input", (e) => {
           row.name = e.target.value;
+          updateCalculations();
           markDirty();
         });
         amountInput.addEventListener("input", (e) => {
@@ -1010,15 +1015,34 @@ const firebaseConfig = {
       return Number.isFinite(n) && n > 0 ? n : 0;
     }
 
-    function isQrisExpense(note) {
-      const text = String(note || "").toLowerCase();
-      return /buku\s*pay|bukupay/.test(text) && /\badmin\b/.test(text);
+    function isQrisExpenseName(name) {
+      // Matching dilakukan dari NAMA pengeluaran operasional (bukan kolom keterangan).
+      // Dukung variasi penulisan umum: BukuPay, Buku Pay, BuPay, admin, adm, dll.
+      const text = String(name || "")
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      return /\bbukupay\b|\bbuku\s*pay\b|\bbupay\b|\badmin\b|\badm\b|\badministrasi\b/.test(text);
     }
 
     function getExpenses() {
-      return [...operationalRows, ...mealRows]
-        .map(row => ({ name: row.name || "", amount: Number(row.amount || 0), note: row.note || "", qrisAdjustment: isQrisExpense(row.note) }))
-        .filter(row => row.amount > 0 || row.note.trim());
+      const operational = operationalRows.map(row => ({
+        type: "operational",
+        name: String(row.name || ""),
+        amount: Number(row.amount || 0),
+        note: String(row.note || ""),
+        qrisAdjustment: isQrisExpenseName(row.name)
+      }));
+      const meals = mealRows.map(row => ({
+        type: "meal",
+        name: String(row.name || ""),
+        amount: Number(row.amount || 0),
+        note: String(row.note || ""),
+        qrisAdjustment: false
+      }));
+      return [...operational, ...meals].filter(row => row.amount > 0 || row.name.trim() || row.note.trim());
     }
 
     async function loadPreviousBrokenMoney(branch, dateKey) {
@@ -1096,6 +1120,11 @@ const firebaseConfig = {
             brokenMoneyDifference: totals.brokenMoneyDifference,
             reconciliationTotal: totals.reconciliationTotal,
             totalIncome: totals.totalIncome,
+            totalCash: totals.totalCash,
+            totalQris: totals.totalQris,
+            totalTransfer: totals.totalTransfer,
+            cashExpenseAdjustment: totals.cashExpenseAdjustment,
+            qrisExpenseAdjustment: totals.qrisExpenseAdjustment,
             totalSales: totals.totalSales,
             difference: totals.difference,
             finalBrokenMoney: totals.finalBrokenMoney,
@@ -1115,14 +1144,18 @@ const firebaseConfig = {
       const transfer = numericInput("incomeTransfer");
       const expenses = getExpenses();
 
-      // Pengeluaran hanya dicatat sebagai informasi. Tidak ada pengeluaran
-      // yang otomatis ditambahkan ke Cash/QRIS maupun Total Pemasukan.
+      // Pengeluaran operasional bertanda BukuPay/admin/adm masuk ke QRIS.
+      // Pengeluaran lain dari operasional maupun makan/minum masuk ke Cash.
       const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-      const qrisAdjustment = 0;
-      const cashAdjustment = 0;
-      const adjustedCash = baseCash;
-      const adjustedQris = baseQris;
-      const totalIncome = baseCash + baseQris + transfer;
+      const qrisAdjustment = expenses
+        .filter(expense => expense.type === "operational" && expense.qrisAdjustment)
+        .reduce((sum, expense) => sum + expense.amount, 0);
+      const cashAdjustment = expenses
+        .filter(expense => !expense.qrisAdjustment)
+        .reduce((sum, expense) => sum + expense.amount, 0);
+      const adjustedCash = baseCash + cashAdjustment;
+      const adjustedQris = baseQris + qrisAdjustment;
+      const totalIncome = adjustedCash + adjustedQris + transfer;
 
       const totalSales = numericInput("totalSales");
       const brokenMoney = numericInput("brokenMoney");
@@ -1139,7 +1172,7 @@ const firebaseConfig = {
         : null;
 
       // Setoran QRIS mengikuti seluruh nominal QRIS yang tersedia.
-      const qrisOwnerDeposit = Math.min(baseQris, totalSales);
+      const qrisOwnerDeposit = Math.min(adjustedQris, totalSales);
 
       // Bagian non-QRIS menjadi dasar Setoran Cash. Setoran Cash dibulatkan
       // TURUN ke kelipatan Rp50.000. Sisa dari cash otomatis menjadi uang pecah.
@@ -1179,6 +1212,11 @@ const firebaseConfig = {
         adjustedCash,
         adjustedQris,
         totalIncome,
+        totalCash: adjustedCash,
+        totalQris: adjustedQris,
+        totalTransfer: transfer,
+        cashExpenseAdjustment: cashAdjustment,
+        qrisExpenseAdjustment: qrisAdjustment,
         totalSales,
         brokenMoney,
         previousBrokenMoney,
@@ -1203,9 +1241,9 @@ const firebaseConfig = {
     function updateCalculations() {
       const totals = computeTotals();
 
-      $("cashBaseDisplay").textContent = money(totals.baseCash);
       $("cashAdjustedDisplay").textContent = money(totals.adjustedCash);
       $("qrisAdjustedDisplay").textContent = money(totals.adjustedQris);
+      $("transferDisplay").textContent = money(totals.transfer);
       $("totalIncomeDisplay").textContent = money(totals.totalIncome);
       $("operationalTotalDisplay").textContent = money(totals.operationalTotal);
       $("mealTotalDisplay").textContent = money(totals.mealTotal);
@@ -1401,7 +1439,7 @@ const firebaseConfig = {
       const monthKey = dateKey.slice(0, 7);
       const totals = computeTotals();
       return {
-        schemaVersion: 5,
+        schemaVersion: 6,
         dateKey,
         monthKey,
         branchId: sanitizeId(branch),
@@ -1415,14 +1453,20 @@ const firebaseConfig = {
           qrisNote: $("incomeQrisNote").value.trim(),
           transfer: totals.transfer,
           transferNote: $("incomeTransferNote").value.trim(),
-          cashAdjusted: totals.baseCash,
-          qrisAdjusted: totals.baseQris,
-          qrisAdjustment: 0
+          cashAdjusted: totals.adjustedCash,
+          qrisAdjusted: totals.adjustedQris,
+          cashAdjustment: totals.cashAdjustment,
+          qrisAdjustment: totals.qrisAdjustment
         },
         operationalExpenses: serializeRows(operationalRows),
         mealExpenses: serializeRows(mealRows),
         totals: {
           totalIncome: totals.totalIncome,
+          totalCash: totals.totalCash,
+          totalQris: totals.totalQris,
+          totalTransfer: totals.totalTransfer,
+          cashExpenseAdjustment: totals.cashExpenseAdjustment,
+          qrisExpenseAdjustment: totals.qrisExpenseAdjustment,
           totalOperational: totals.operationalTotal,
           totalMeal: totals.mealTotal,
           totalExpenses: totals.totalExpenses,
@@ -1567,9 +1611,21 @@ const firebaseConfig = {
       const recalculated = computeTotals();
       currentRecord = {
         ...record,
+        income: {
+          ...(record.income || {}),
+          cashAdjusted: recalculated.adjustedCash,
+          qrisAdjusted: recalculated.adjustedQris,
+          cashAdjustment: recalculated.cashAdjustment,
+          qrisAdjustment: recalculated.qrisAdjustment
+        },
         totals: {
           ...(record.totals || {}),
           totalIncome: recalculated.totalIncome,
+          totalCash: recalculated.totalCash,
+          totalQris: recalculated.totalQris,
+          totalTransfer: recalculated.totalTransfer,
+          cashExpenseAdjustment: recalculated.cashExpenseAdjustment,
+          qrisExpenseAdjustment: recalculated.qrisExpenseAdjustment,
           totalOperational: recalculated.operationalTotal,
           totalMeal: recalculated.mealTotal,
           totalExpenses: recalculated.totalExpenses,
@@ -1738,13 +1794,9 @@ const firebaseConfig = {
           ["Nama Supervisor", record.supervisorName || ""],
           [],
           ["PEMASUKAN"],
-          ["Cash Dasar", income.cash || 0],
-          ["Penyesuaian Cash", 0],
-          ["Total Cash", income.cash || 0],
-          ["QRIS Dasar", income.qris || 0],
-          ["Penyesuaian QRIS", 0],
-          ["Total QRIS", income.qris || 0],
-          ["Transfer", income.transfer || 0],
+          ["Total Cash", totals.totalCash ?? income.cashAdjusted ?? income.cash ?? 0],
+          ["Total QRIS", totals.totalQris ?? income.qrisAdjusted ?? income.qris ?? 0],
+          ["Total Transfer", totals.totalTransfer ?? income.transfer ?? 0],
           ["TOTAL PEMASUKAN", totals.totalIncome || 0],
           [],
           ["PENGELUARAN"],
