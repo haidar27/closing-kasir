@@ -1982,8 +1982,10 @@ const firebaseConfig = {
       );
       const totalExpenses = expenses.reduce((sum, row) => sum + Number(row.amount || 0), 0);
       const grossPayments = qris + cashDeposit + transfer;
-      const startingDifference = totalSales - grossPayments;
-      const temporaryDifference = startingDifference - totalExpenses;
+      // Konvensi tanda selisih: nilai negatif berarti kekurangan, positif berarti kelebihan.
+      const startingDifference = grossPayments - totalSales;
+      // Pengeluaran menjelaskan sebagian kekurangan, sehingga ditambahkan kembali ke selisih bertanda.
+      const temporaryDifference = startingDifference + totalExpenses;
       const currentBrokenMoney = Number(
         totals.brokenMoneyCounted ?? totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0
       );
@@ -1993,8 +1995,9 @@ const firebaseConfig = {
         ? Boolean(totals.hasPreviousBrokenMoney)
         : (Boolean(totals.previousBrokenMoneyDate) || previousBrokenMoneyValue !== undefined && previousBrokenMoneyValue !== null);
       const previousBrokenMoney = hasPreviousBrokenMoney ? Number(previousBrokenMoneyValue || 0) : 0;
-      // Mengikuti contoh Excel: perubahan = uang pecah kemarin - uang pecah saat ini.
-      const brokenMoneyChange = previousBrokenMoney - currentBrokenMoney;
+      // Positif berarti uang pecah hari ini lebih banyak; negatif berarti berkurang.
+      // Tanpa data hari sebelumnya, perubahan tidak dihitung karena tidak ada pembanding.
+      const brokenMoneyChange = hasPreviousBrokenMoney ? currentBrokenMoney - previousBrokenMoney : 0;
       const finalDifference = temporaryDifference + brokenMoneyChange;
 
       const rows = [];
@@ -2036,7 +2039,7 @@ const firebaseConfig = {
       addRow(["Cash Disetor", amountOrBlank(cashDeposit), String(income.cashNote || "")], "payment");
       addRow(["Transfer", amountOrBlank(transfer), String(income.transferNote || "")], "payment");
       const grossPaymentsRow = addRow(["Penjualan Bruto", formulaCell("SUM(B7:B9)", grossPayments), ""], "grossPayments");
-      const startingDifferenceRow = addRow(["SELISIH AWAL", formulaCell(`B6-B${grossPaymentsRow}`, startingDifference), ""], "startingDifference");
+      const startingDifferenceRow = addRow(["SELISIH AWAL", formulaCell(`B${grossPaymentsRow}-B6`, startingDifference), ""], "startingDifference");
       addRow([], "blank");
       const expenseHeaderRow = addRow(["B. RINCIAN PENYEBAB / PENYESUAIAN SELISIH", "", ""], "expenseHeader");
 
@@ -2059,7 +2062,7 @@ const firebaseConfig = {
       ], "totalExpense");
       const temporaryDifferenceRow = addRow([
         "SELISIH SEMENTARA",
-        formulaCell(`B${startingDifferenceRow}-B${totalExpenseRow}`, temporaryDifference),
+        formulaCell(`B${startingDifferenceRow}+B${totalExpenseRow}`, temporaryDifference),
         ""
       ], "temporaryDifference");
       addRow([], "blank");
@@ -2070,7 +2073,9 @@ const firebaseConfig = {
       const currentBrokenMoneyRow = addRow(["Uang Pecah Saat ini", numberCell(currentBrokenMoney), ""], "brokenMoneyLine");
       const brokenMoneyChangeRow = addRow([
         "Perubahan Uang Pecah",
-        formulaCell(`B${previousBrokenMoneyRow}-B${currentBrokenMoneyRow}`, brokenMoneyChange),
+        hasPreviousBrokenMoney
+          ? formulaCell(`B${currentBrokenMoneyRow}-B${previousBrokenMoneyRow}`, brokenMoneyChange)
+          : "",
         ""
       ], "brokenMoneyChange");
       addRow([
