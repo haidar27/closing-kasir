@@ -563,6 +563,11 @@
                   <label for="brokenMoney">Uang Pecah yang Dihitung Hari Ini</label>
                   <input id="brokenMoney" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 0" />
                 </div>
+                <div class="field">
+                  <label for="brokenMoneyAllowance">Ketetapan Uang Pecah (Modal)</label>
+                  <input id="brokenMoneyAllowance" class="money money-input" type="text" inputmode="numeric" autocomplete="off" placeholder="Rp 500.000" />
+                  <small>Nominal modal uang pecah yang ditetapkan untuk closing.</small>
+                </div>
               </div>
 
               <div class="money-summary three-col" style="margin-top:16px;">
@@ -1204,6 +1209,7 @@ const firebaseConfig = {
 
       const totalSales = numericInput("totalSales");
       const brokenMoney = numericInput("brokenMoney");
+      const brokenMoneyAllowance = numericInput("brokenMoneyAllowance");
       const hasPreviousBrokenMoney = Boolean(previousBrokenMoneyRecord);
       const previousBrokenMoney = hasPreviousBrokenMoney
         ? getRecordCountedBrokenMoney(previousBrokenMoneyRecord)
@@ -1258,6 +1264,7 @@ const firebaseConfig = {
         qrisExpenseAdjustment: qrisAdjustment,
         totalSales,
         brokenMoney,
+        brokenMoneyAllowance,
         previousBrokenMoney,
         previousBrokenMoneyDate,
         hasPreviousBrokenMoney,
@@ -1456,6 +1463,7 @@ const firebaseConfig = {
       $("incomeTransferNote").value = "";
       setRupiahInputValue("totalSales", "");
       setRupiahInputValue("brokenMoney", "");
+      setRupiahInputValue("brokenMoneyAllowance", 500000);
       defaultFormRows();
       clearCurrentRecord();
       updateCalculations();
@@ -1479,7 +1487,7 @@ const firebaseConfig = {
       const monthKey = dateKey.slice(0, 7);
       const totals = computeTotals();
       return {
-        schemaVersion: 7,
+        schemaVersion: 8,
         dateKey,
         monthKey,
         branchId: sanitizeId(branch),
@@ -1513,6 +1521,7 @@ const firebaseConfig = {
           totalSales: totals.totalSales,
           reconciliationTotal: totals.reconciliationTotal,
           difference: totals.difference,
+          brokenMoneyAllowance: totals.brokenMoneyAllowance,
           brokenMoney: totals.brokenMoney,
           brokenMoneyInitial: totals.brokenMoney,
           brokenMoneyCounted: totals.brokenMoney,
@@ -1642,6 +1651,7 @@ const firebaseConfig = {
       $("incomeTransferNote").value = record.income?.transferNote || "";
       setRupiahInputValue("totalSales", record.totals?.totalSales || "");
       setRupiahInputValue("brokenMoney", record.totals?.brokenMoneyInitial ?? record.totals?.brokenMoney ?? "");
+      setRupiahInputValue("brokenMoneyAllowance", record.totals?.brokenMoneyAllowance ?? 500000);
       operationalRows.splice(0, operationalRows.length, ...(record.operationalExpenses || []).map((r, i) => ({ id:`op-${Date.now()}-${i}`, name:r.name || "", amount:Number(r.amount || 0), note:r.note || "" })));
       mealRows.splice(0, mealRows.length, ...(record.mealExpenses || []).map((r, i) => ({ id:`meal-${Date.now()}-${i}`, name:r.name || "", amount:Number(r.amount || 0), note:r.note || "" })));
       if (!operationalRows.length) operationalRows.push({ id:`op-${Date.now()}`, name:"", amount:0, note:"" });
@@ -1676,6 +1686,7 @@ const firebaseConfig = {
           totalSales: recalculated.totalSales,
           reconciliationTotal: recalculated.reconciliationTotal,
           difference: recalculated.difference,
+          brokenMoneyAllowance: recalculated.brokenMoneyAllowance,
           brokenMoney: recalculated.brokenMoney,
           brokenMoneyInitial: recalculated.brokenMoney,
           brokenMoneyCounted: recalculated.brokenMoney,
@@ -1862,6 +1873,31 @@ const firebaseConfig = {
       return `closing kasir ${branchName} - ${dateName}`;
     }
 
+    function formatExcelExportBase(record) {
+      const parts = String(record.dateKey || localDateKey()).split("-").map(Number);
+      const [year, month, day] = parts;
+      const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+      const branchName = String(record.branch || "CABANG")
+        .trim()
+        .toLocaleUpperCase("id-ID")
+        .replace(/[\\/:*?"<>|]/g, " ")
+        .replace(/\s+/g, " ");
+      const dateName = Number.isFinite(day) && Number.isFinite(month) && month >= 1 && month <= 12
+        ? `${day} ${monthNames[month - 1]} ${year}`
+        : String(record.dateKey || localDateKey()).replace(/[-/]+/g, " ");
+      return `closing kasir ${branchName} ${dateName}`.replace(/\s+/g, " ").trim();
+    }
+
+    function formatExcelSheetName(record) {
+      const parts = String(record.dateKey || "").split("-").map(Number);
+      const [, month, day] = parts;
+      const monthAbbreviations = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEPT", "OKT", "NOV", "DES"];
+      if (parts.length === 3 && Number.isFinite(day) && Number.isFinite(month) && month >= 1 && month <= 12) {
+        return `${day} ${monthAbbreviations[month - 1]}`;
+      }
+      return "CLOSING KASIR";
+    }
+
     function buildExportRows(record) {
       const totals = record.totals || {};
       const income = record.income || {};
@@ -1923,7 +1959,7 @@ const firebaseConfig = {
       };
     }
 
-    function buildExcelReport(record) {
+    function buildExcelReport(record, workbook = null, customSheetName = "") {
       const totals = record.totals || {};
       const income = record.income || {};
       const operational = (record.operationalExpenses || []).filter(row =>
@@ -1951,6 +1987,7 @@ const firebaseConfig = {
       const currentBrokenMoney = Number(
         totals.brokenMoneyCounted ?? totals.brokenMoneyInitial ?? totals.brokenMoney ?? 0
       );
+      const brokenMoneyAllowance = Number(totals.brokenMoneyAllowance ?? 500000);
       const previousBrokenMoneyValue = totals.previousBrokenMoneyCounted ?? totals.previousBrokenMoney;
       const hasPreviousBrokenMoney = totals.hasPreviousBrokenMoney !== undefined && totals.hasPreviousBrokenMoney !== null
         ? Boolean(totals.hasPreviousBrokenMoney)
@@ -2027,8 +2064,8 @@ const firebaseConfig = {
       ], "temporaryDifference");
       addRow([], "blank");
       addRow(["UANG PECAH", "", ""], "brokenMoneyHeader");
-      // Angka ketetapan Rp500.000 mengikuti nominal tetap di setiap sheet contoh.
-      addRow(["Ketetapan Uang Pecah", numberCell(500000), ""], "brokenMoneyLine");
+      // Ketetapan uang pecah diambil dari input tersimpan; record lama memakai nilai awal Rp500.000.
+      addRow(["Ketetapan Uang Pecah", numberCell(brokenMoneyAllowance), ""], "brokenMoneyLine");
       const previousBrokenMoneyRow = addRow(["Uang Pecah Kemarin", hasPreviousBrokenMoney ? numberCell(previousBrokenMoney) : "", ""], "brokenMoneyLine");
       const currentBrokenMoneyRow = addRow(["Uang Pecah Saat ini", numberCell(currentBrokenMoney), ""], "brokenMoneyLine");
       const brokenMoneyChangeRow = addRow([
@@ -2155,26 +2192,72 @@ const firebaseConfig = {
         }
       }
 
-      const workbook = XLSX.utils.book_new();
-      workbook.Workbook = workbook.Workbook || {};
-      workbook.Workbook.CalcPr = { calcMode: "auto", fullCalcOnLoad: true, forceFullCalc: true };
-      const monthAbbreviations = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOV", "DES"];
-      const sheetName = validDate ? `${dateParts[2]} ${monthAbbreviations[dateParts[1] - 1]}` : "Closing Kasir";
-      XLSX.utils.book_append_sheet(workbook, ws, sheetName.slice(0, 31));
-      return workbook;
+      const targetWorkbook = workbook || XLSX.utils.book_new();
+      targetWorkbook.Workbook = targetWorkbook.Workbook || {};
+      targetWorkbook.Workbook.CalcPr = { calcMode: "auto", fullCalcOnLoad: true, forceFullCalc: true };
+      const sheetName = customSheetName || (validDate ? formatExcelSheetName(record) : "CLOSING KASIR");
+      XLSX.utils.book_append_sheet(targetWorkbook, ws, sheetName.slice(0, 31));
+      return targetWorkbook;
     }
 
-    function exportExcel() {
+    async function exportExcel() {
       const record = currentRecord || collectPayload();
       if (!record?.dateKey || !record?.branch) { showToast("Data closing belum siap untuk diekspor.", "warn"); return; }
       if (!window.XLSX) { showToast("Library Excel belum termuat. Coba refresh halaman.", "error"); return; }
+      if (!db || !authUser) {
+        showToast("Firebase belum siap untuk memuat laporan closing sebelumnya.", "error", 4500);
+        return;
+      }
+
+      setLoading(true, "Menyiapkan laporan Excel dan histori closing…");
       try {
-        const wb = buildExcelReport(record);
-        XLSX.writeFile(wb, `${formatExportBase(record)}.xlsx`, { compression: true });
-        showToast("Laporan Excel berhasil dibuat.", "success");
+        // Ambil seluruh histori cabang ini; laporan setelah tanggal aktif tidak dimasukkan.
+        const historyQuery = query(
+          collection(db, "closings"),
+          where("branchId", "==", sanitizeId(record.branch))
+        );
+        const historySnapshot = await getDocs(historyQuery);
+        const recordsByDate = new Map();
+        historySnapshot.forEach(snapshot => {
+          const data = snapshot.data();
+          if (!data?.dateKey || data.dateKey > record.dateKey) return;
+          recordsByDate.set(data.dateKey, { ...data, id: snapshot.id });
+        });
+
+        // Pastikan sheet tanggal yang sedang diekspor memakai record aktif.
+        recordsByDate.set(record.dateKey, record);
+        const reportRecords = [...recordsByDate.values()]
+          .filter(item => item?.dateKey && item.dateKey <= record.dateKey)
+          .sort((a, b) => String(b.dateKey).localeCompare(String(a.dateKey)));
+        if (!reportRecords.length) reportRecords.push(record);
+
+        const wb = XLSX.utils.book_new();
+        wb.Workbook = wb.Workbook || {};
+        wb.Workbook.CalcPr = { calcMode: "auto", fullCalcOnLoad: true, forceFullCalc: true };
+        const usedNames = new Set();
+
+        for (const reportRecord of reportRecords) {
+          const baseName = formatExcelSheetName(reportRecord);
+          let sheetName = baseName;
+          if (usedNames.has(sheetName.toLocaleUpperCase("id-ID"))) {
+            const year = String(reportRecord.dateKey || "").slice(0, 4);
+            sheetName = `${baseName} ${year}`.slice(0, 31);
+            let suffix = 2;
+            while (usedNames.has(sheetName.toLocaleUpperCase("id-ID"))) {
+              sheetName = `${baseName} ${year} (${suffix++})`.slice(0, 31);
+            }
+          }
+          usedNames.add(sheetName.toLocaleUpperCase("id-ID"));
+          buildExcelReport(reportRecord, wb, sheetName);
+        }
+
+        XLSX.writeFile(wb, `${formatExcelExportBase(record)}.xlsx`, { compression: true });
+        showToast(`Laporan Excel berhasil dibuat dengan ${reportRecords.length} sheet.`, "success");
       } catch (error) {
         console.error("Excel export error", error);
-        showToast(`Gagal membuat Excel: ${error.message || "periksa data laporan"}`, "error", 5000);
+        showToast(`Gagal membuat Excel: ${error.message || "periksa koneksi Firebase dan data histori"}`, "error", 5500);
+      } finally {
+        setLoading(false);
       }
     }
 
@@ -2280,7 +2363,7 @@ const firebaseConfig = {
       $("branchCodeModal").addEventListener("click", (e) => {
         if (e.target === $("branchCodeModal")) closeBranchCodeModal(false);
       });
-      ["incomeCash","incomeQris","incomeTransfer","totalSales","brokenMoney"].forEach(id => {
+      ["incomeCash","incomeQris","incomeTransfer","totalSales","brokenMoney","brokenMoneyAllowance"].forEach(id => {
         $(id).addEventListener("input", () => {
           updateCalculations();
           markDirty();
